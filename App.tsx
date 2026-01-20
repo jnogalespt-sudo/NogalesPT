@@ -20,7 +20,7 @@ const SocialLink = ({ platform, handle }: { platform: 'instagram' | 'linkedin' |
   const platforms = {
     instagram: { icon: Instagram, color: 'hover:text-pink-600 hover:bg-pink-50', url: (h: string) => `https://instagram.com/${h}`, label: 'Instagram' },
     linkedin: { icon: Linkedin, color: 'hover:text-blue-700 hover:bg-blue-50', url: (h: string) => `https://linkedin.com/in/${h}`, label: 'LinkedIn' },
-    tiktok: { icon: Music, color: 'hover:text-slate-900 hover:bg-slate-100', url: (h: string) => `https://tiktok.com/@${h}`, label: 'TikTok' },
+    tiktok: { icon: Music, color: 'hover:text-slate-900 hover:bg-slate-100', url: (h: string) => `https://tiktok.com/@h`, label: 'TikTok' },
     twitter: { icon: Twitter, color: 'hover:text-sky-500 hover:bg-sky-50', url: (h: string) => `https://twitter.com/${h}`, label: 'Twitter' },
     website: { icon: Globe, color: 'hover:text-emerald-600 hover:bg-emerald-50', url: (h: string) => h.startsWith('http') ? h : `https://${h}`, label: 'Web' }
   };
@@ -88,18 +88,25 @@ const App: React.FC = () => {
     instagram: '', linkedin: '', tiktok: '', twitter: '', website: ''
   });
 
+  // Determinar si estamos en un dispositivo táctil (Móvil/Tablet/iPad)
+  const isTouchDevice = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth <= 1024 || 
+           /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
+           (navigator.maxTouchPoints > 0 && /Macintosh/.test(navigator.userAgent));
+  }, []);
+
   const updateUrl = (newView: AppView, params: Record<string, string> = {}) => {
     const searchParams = new URLSearchParams();
     searchParams.set('view', newView);
     Object.entries(params).forEach(([key, val]) => {
-      if (val) searchParams.set(key, val);
+      if (val !== undefined && val !== null) searchParams.set(key, val);
     });
     const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
     window.history.pushState({ view: newView, ...params }, '', newUrl);
   };
 
   const navigateTo = (newView: AppView, params: Record<string, string> = {}) => {
-    // Protección de ruta para Upload
     if (newView === AppView.Upload && !currentUser) {
       setAuthError("Debes registrarte o iniciar sesión para compartir recursos.");
       setView(AppView.Account);
@@ -147,6 +154,10 @@ const App: React.FC = () => {
               setSelectedResource(resource);
               setView(AppView.Detail);
               setActiveCategory(resource.mainCategory);
+              // Soportar pantalla completa desde URL
+              if (params.get('fullscreen') === 'true') {
+                setIsFullScreen(true);
+              }
             } else {
               setView(AppView.Explore);
             }
@@ -178,8 +189,10 @@ const App: React.FC = () => {
       const urlView = params.get('view') as AppView;
       if (urlView) {
         setView(urlView);
+        if (params.get('fullscreen') !== 'true') setIsFullScreen(false);
       } else {
         setView(AppView.Home);
+        setIsFullScreen(false);
       }
     };
 
@@ -189,14 +202,14 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (view === AppView.Detail && selectedResource) {
-      document.title = `${selectedResource.title} | NOGALESPT`;
+      document.title = `${isFullScreen ? '[Ampliado] ' : ''}${selectedResource.title} | NOGALESPT`;
     } else if (view === AppView.Profile && viewingUserEmail) {
       const user = users.find(u => u.email === viewingUserEmail);
       document.title = user ? `${user.name} | NOGALESPT` : 'Docente | NOGALESPT';
     } else {
       document.title = 'NOGALESPT - Repositorio Colaborativo';
     }
-  }, [view, selectedResource, viewingUserEmail, users]);
+  }, [view, selectedResource, viewingUserEmail, users, isFullScreen]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -207,7 +220,7 @@ const App: React.FC = () => {
 
   const copyResourceLink = () => {
     if (!selectedResource) return;
-    const url = `${window.location.origin}${window.location.pathname}?view=detail&id=${selectedResource.id}`;
+    const url = `${window.location.origin}${window.location.pathname}?view=detail&id=${selectedResource.id}${isFullScreen ? '&fullscreen=true' : ''}`;
     copyToClipboard(url);
   };
 
@@ -254,21 +267,14 @@ const App: React.FC = () => {
   };
 
   const toggleFullScreen = () => {
-    // Definimos "móvil o tablet" para incluir iPads (incluso en modo escritorio) y dispositivos de hasta 1024px
-    const isMobileOrTablet = window.innerWidth <= 1024 || 
-                             /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
-                             (navigator.maxTouchPoints > 0 && /Macintosh/.test(navigator.userAgent));
-    
-    if (isMobileOrTablet && selectedResource) {
-      if (selectedResource.pastedCode) {
-        const blob = new Blob([selectedResource.pastedCode], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const win = window.open(url, '_blank');
-        if (win) win.focus();
-      } else if (selectedResource.contentUrl) {
-        const win = window.open(selectedResource.contentUrl, '_blank');
-        if (win) win.focus();
-      }
+    if (!selectedResource) return;
+
+    if (isTouchDevice) {
+      // En dispositivos táctiles, para evitar errores de URL temporal (blobs) no compartibles,
+      // abrimos una nueva pestaña con la URL oficial del recurso en modo pantalla completa.
+      const fullscreenUrl = `${window.location.origin}${window.location.pathname}?view=detail&id=${selectedResource.id}&fullscreen=true`;
+      const win = window.open(fullscreenUrl, '_blank');
+      if (win) win.focus();
       return;
     }
 
@@ -282,12 +288,14 @@ const App: React.FC = () => {
         (container as any).webkitRequestFullscreen();
       }
       setIsFullScreen(true);
+      updateUrl(AppView.Detail, { id: selectedResource.id, fullscreen: 'true' });
       document.body.style.overflow = 'hidden';
     } else {
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
       setIsFullScreen(false);
+      updateUrl(AppView.Detail, { id: selectedResource.id });
       document.body.style.overflow = '';
     }
   };
@@ -653,11 +661,6 @@ const App: React.FC = () => {
       </div>
     );
   }
-
-  // Helper para determinar si estamos en un dispositivo táctil (Móvil/Tablet/iPad)
-  const isTouchDevice = window.innerWidth <= 1024 || 
-                       /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
-                       (navigator.maxTouchPoints > 0 && /Macintosh/.test(navigator.userAgent));
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">
