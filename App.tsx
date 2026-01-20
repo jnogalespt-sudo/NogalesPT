@@ -254,9 +254,12 @@ const App: React.FC = () => {
   };
 
   const toggleFullScreen = () => {
-    const isMobile = window.innerWidth <= 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    // Definimos "móvil o tablet" para incluir iPads (incluso en modo escritorio) y dispositivos de hasta 1024px
+    const isMobileOrTablet = window.innerWidth <= 1024 || 
+                             /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
+                             (navigator.maxTouchPoints > 0 && /Macintosh/.test(navigator.userAgent));
     
-    if (isMobile && selectedResource) {
+    if (isMobileOrTablet && selectedResource) {
       if (selectedResource.pastedCode) {
         const blob = new Blob([selectedResource.pastedCode], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
@@ -650,6 +653,11 @@ const App: React.FC = () => {
       </div>
     );
   }
+
+  // Helper para determinar si estamos en un dispositivo táctil (Móvil/Tablet/iPad)
+  const isTouchDevice = window.innerWidth <= 1024 || 
+                       /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
+                       (navigator.maxTouchPoints > 0 && /Macintosh/.test(navigator.userAgent));
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">
@@ -1224,7 +1232,7 @@ const App: React.FC = () => {
                         onClick={toggleFullScreen} 
                         className="absolute bottom-6 right-6 p-4 bg-white/90 backdrop-blur-md text-black rounded-2xl opacity-100 md:opacity-0 md:group-hover/viewer:opacity-100 transition-all hover:bg-white active:scale-90 shadow-lg"
                       >
-                        { (window.innerWidth <= 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) ? <ExternalLink size={24} /> : <Maximize2 size={24} /> }
+                        { isTouchDevice ? <ExternalLink size={24} /> : <Maximize2 size={24} /> }
                       </button>
                     )}
 
