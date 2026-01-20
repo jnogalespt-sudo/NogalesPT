@@ -9,7 +9,7 @@ import {
   Loader2, AlertCircle, Monitor, CheckCircle2, Instagram, Linkedin, 
   Share2, Camera, LogOut, Mail, Link as LinkIcon, RefreshCw, Image as ImageIcon, Music, Lock, EyeOff, Minimize,
   Twitter, AtSign, Send, MessageCircle, Trash2, Edit3, ShieldAlert, KeyRound, Zap,
-  Layers3, Maximize2, Inbox, Copy, Check
+  Layers3, Maximize2, Inbox, Copy, Check, LogIn
 } from 'lucide-react';
 import { AppView, Resource, User as UserType, EducationalLevel, MainCategory, PrivateMessage } from './types';
 import { SUBJECTS_BY_LEVEL, COURSES_BY_LEVEL } from './constants';
@@ -88,7 +88,6 @@ const App: React.FC = () => {
     instagram: '', linkedin: '', tiktok: '', twitter: '', website: ''
   });
 
-  // Helper para actualizar la URL sin recargar la página
   const updateUrl = (newView: AppView, params: Record<string, string> = {}) => {
     const searchParams = new URLSearchParams();
     searchParams.set('view', newView);
@@ -99,20 +98,27 @@ const App: React.FC = () => {
     window.history.pushState({ view: newView, ...params }, '', newUrl);
   };
 
-  // Función principal de navegación
   const navigateTo = (newView: AppView, params: Record<string, string> = {}) => {
+    // Protección de ruta para Upload
+    if (newView === AppView.Upload && !currentUser) {
+      setAuthError("Debes registrarte o iniciar sesión para compartir recursos.");
+      setView(AppView.Account);
+      updateUrl(AppView.Account);
+      setIsMenuOpen(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     setView(newView);
     updateUrl(newView, params);
     setIsMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    // Si no estamos en edición/subida, limpiamos el formulario
     if (newView !== AppView.Upload && newView !== AppView.Profile && newView !== AppView.Detail && newView !== AppView.Messages) {
       resetForm();
     }
   };
 
-  // Carga inicial y parsing de URL
   useEffect(() => {
     const initApp = async () => {
       try {
@@ -127,9 +133,9 @@ const App: React.FC = () => {
         setMessages(msgData || []);
         
         const stored = localStorage.getItem('nogalespt_current_user');
-        if (stored) setCurrentUser(JSON.parse(stored));
+        const parsedUser = stored ? JSON.parse(stored) : null;
+        if (parsedUser) setCurrentUser(parsedUser);
 
-        // Mirar si venimos de una URL con parámetros
         const params = new URLSearchParams(window.location.search);
         const urlView = params.get('view') as AppView;
         
@@ -152,6 +158,9 @@ const App: React.FC = () => {
             } else {
               setView(AppView.Explore);
             }
+          } else if (urlView === AppView.Upload && !parsedUser) {
+            setView(AppView.Account);
+            setAuthError("Identifícate para subir materiales.");
           } else {
             setView(urlView);
           }
@@ -164,16 +173,11 @@ const App: React.FC = () => {
     };
     initApp();
 
-    // Manejar botones atrás/adelante del navegador
     const handlePopState = (event: PopStateEvent) => {
       const params = new URLSearchParams(window.location.search);
       const urlView = params.get('view') as AppView;
       if (urlView) {
         setView(urlView);
-        if (urlView === AppView.Detail) {
-          const id = params.get('id');
-          // El recurso se buscará en el estado actual en el siguiente renderizado
-        }
       } else {
         setView(AppView.Home);
       }
@@ -183,7 +187,6 @@ const App: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Actualizar el título de la pestaña del navegador
   useEffect(() => {
     if (view === AppView.Detail && selectedResource) {
       document.title = `${selectedResource.title} | NOGALESPT`;
@@ -215,9 +218,14 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!editingResourceId) {
-      setFormData(prev => ({ ...prev, mainCategory: activeCategory }));
+      setFormData(prev => ({ 
+        ...prev, 
+        mainCategory: activeCategory,
+        authorName: currentUser ? `${currentUser.name} ${currentUser.lastName || ''}`.trim() : '',
+        email: currentUser?.email || ''
+      }));
     }
-  }, [activeCategory, view, editingResourceId]);
+  }, [activeCategory, view, editingResourceId, currentUser]);
 
   useEffect(() => {
     if (currentUser) {
@@ -379,8 +387,10 @@ const App: React.FC = () => {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) return alert("Sesión expirada. Por favor, vuelve a entrar.");
     if (!formData.title.trim()) return alert("El título es obligatorio.");
     if (formData.courses.length === 0) return alert("Selecciona al menos un curso destinatario.");
+    
     setIsUploading(true);
     if (formData.uploadMethod === 'file') {
       if (formData.fileBlob) {
@@ -436,11 +446,19 @@ const App: React.FC = () => {
   const resetForm = () => {
     setEditingResourceId(null);
     setFormData({
-      title: '', authorName: '', email: '', summary: '', 
-      level: 'Infantil', subject: 'Crecimiento en Armonía',
-      courses: [], resourceType: 'Material Didáctico', 
-      mainCategory: activeCategory, uploadMethod: 'file',
-      fileName: '', fileBlob: null, pastedCode: ''
+      title: '', 
+      authorName: currentUser ? `${currentUser.name} ${currentUser.lastName || ''}`.trim() : '', 
+      email: currentUser?.email || '', 
+      summary: '', 
+      level: 'Infantil', 
+      subject: 'Crecimiento en Armonía',
+      courses: [], 
+      resourceType: 'Material Didáctico', 
+      mainCategory: activeCategory, 
+      uploadMethod: 'file',
+      fileName: '', 
+      fileBlob: null, 
+      pastedCode: ''
     });
   };
 
@@ -635,7 +653,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">
-      {/* Notificación Toast para copia de enlace */}
       {copySuccess && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] bg-emerald-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
           <Check size={18} />
@@ -712,7 +729,6 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Filtros */}
             <div className="bg-white p-4 md:p-6 rounded-[24px] border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
               <div className="flex items-center gap-2 text-slate-400 mr-2">
                 <Filter size={18} />
@@ -770,7 +786,6 @@ const App: React.FC = () => {
               )}
             </div>
 
-            {/* Listado de Recursos */}
             {filteredResources.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {filteredResources.map(res => (
@@ -998,6 +1013,12 @@ const App: React.FC = () => {
                 ) : (
                   <>
                     <form onSubmit={handleLogin} className="space-y-4 text-left">
+                      <div className="bg-indigo-50 p-4 rounded-2xl flex items-start gap-4 text-left border border-indigo-100 mb-4">
+                        <Info className="text-indigo-600 mt-1" size={20} />
+                        <p className="text-[10px] font-bold text-indigo-700 uppercase tracking-tight leading-relaxed">
+                          Es necesario estar registrado para poder compartir y subir recursos al repositorio.
+                        </p>
+                      </div>
                       <input required type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="w-full p-4 rounded-2xl bg-slate-50 border-none font-bold outline-none" placeholder="Email" />
                       {!isRegistering && (
                         <div className="space-y-2">
@@ -1036,6 +1057,7 @@ const App: React.FC = () => {
                   <div className="flex-1 text-center md:text-left">
                     <h2 className="text-3xl font-black text-slate-900">{currentUser.name} {currentUser.lastName}</h2>
                     <p className="text-slate-500 font-medium">Docente Colaborador NOGALESPT</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase mt-1 flex items-center justify-center md:justify-start gap-1"><Mail size={12}/> {currentUser.email}</p>
                   </div>
                   <div className="flex gap-4">
                     <button onClick={() => navigateTo(AppView.Messages)} className="p-5 bg-indigo-50 text-indigo-600 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
@@ -1107,11 +1129,12 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {view === AppView.Upload && (
+        {view === AppView.Upload && currentUser && (
           <div className="max-w-4xl mx-auto">
              <div className="bg-white rounded-[32px] shadow-sm border border-slate-200 p-6 md:p-12">
                 <header className="mb-10 text-center">
                   <h2 className="text-2xl md:text-3xl font-black text-slate-900 uppercase tracking-tighter">{editingResourceId ? 'Editar' : 'Subir'} <span className={themeClasses.text}>Material</span></h2>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Publicando como: {currentUser.name}</p>
                 </header>
                 <form onSubmit={handleUpload} className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
