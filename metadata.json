@@ -1,0 +1,8 @@
+{
+  "name": "NOGALESPT - AI Educational Hub",
+  "description": "An advanced repository for Andalusian educational resources featuring AI-powered pedagogical assistance, multiformat viewing, and community sharing.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
