@@ -9,7 +9,7 @@ import {
   Loader2, AlertCircle, Monitor, CheckCircle2, Instagram, Linkedin, 
   Share2, Camera, LogOut, Mail, Link as LinkIcon, RefreshCw, Image as ImageIcon, Music, Lock, EyeOff, Minimize,
   Twitter, AtSign, Send, MessageCircle, Trash2, Edit3, ShieldAlert, KeyRound, Zap,
-  Layers3, Maximize2, Inbox
+  Layers3, Maximize2, Inbox, Copy, Check
 } from 'lucide-react';
 import { AppView, Resource, User as UserType, EducationalLevel, MainCategory, PrivateMessage } from './types';
 import { SUBJECTS_BY_LEVEL, COURSES_BY_LEVEL } from './constants';
@@ -42,6 +42,7 @@ const App: React.FC = () => {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const [view, setView] = useState<AppView>(AppView.Home);
   const [activeCategory, setActiveCategory] = useState<MainCategory>('General');
@@ -57,7 +58,6 @@ const App: React.FC = () => {
   
   const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
 
-  // Estados de mensajería
   const [messageDraft, setMessageDraft] = useState('');
   const [selectedChatPartner, setSelectedChatPartner] = useState<string | null>(null);
 
@@ -66,7 +66,6 @@ const App: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
-  // Estados de cambio de contraseña en perfil
   const [passwordChange, setPasswordChange] = useState({ current: '', new: '', confirm: '' });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -88,6 +87,131 @@ const App: React.FC = () => {
     email: '', name: '', lastName: '', bio: '',
     instagram: '', linkedin: '', tiktok: '', twitter: '', website: ''
   });
+
+  // Helper para actualizar la URL sin recargar la página
+  const updateUrl = (newView: AppView, params: Record<string, string> = {}) => {
+    const searchParams = new URLSearchParams();
+    searchParams.set('view', newView);
+    Object.entries(params).forEach(([key, val]) => {
+      if (val) searchParams.set(key, val);
+    });
+    const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
+    window.history.pushState({ view: newView, ...params }, '', newUrl);
+  };
+
+  // Función principal de navegación
+  const navigateTo = (newView: AppView, params: Record<string, string> = {}) => {
+    setView(newView);
+    updateUrl(newView, params);
+    setIsMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Si no estamos en edición/subida, limpiamos el formulario
+    if (newView !== AppView.Upload && newView !== AppView.Profile && newView !== AppView.Detail && newView !== AppView.Messages) {
+      resetForm();
+    }
+  };
+
+  // Carga inicial y parsing de URL
+  useEffect(() => {
+    const initApp = async () => {
+      try {
+        const [resData, usersData, msgData] = await Promise.all([
+          dbService.getResources().catch(() => []),
+          dbService.getUsers().catch(() => []),
+          dbService.getMessages().catch(() => [])
+        ]);
+        
+        setResources(resData || []);
+        setUsers(usersData || []);
+        setMessages(msgData || []);
+        
+        const stored = localStorage.getItem('nogalespt_current_user');
+        if (stored) setCurrentUser(JSON.parse(stored));
+
+        // Mirar si venimos de una URL con parámetros
+        const params = new URLSearchParams(window.location.search);
+        const urlView = params.get('view') as AppView;
+        
+        if (urlView) {
+          if (urlView === AppView.Detail) {
+            const id = params.get('id');
+            const resource = resData?.find((r: Resource) => r.id === id);
+            if (resource) {
+              setSelectedResource(resource);
+              setView(AppView.Detail);
+              setActiveCategory(resource.mainCategory);
+            } else {
+              setView(AppView.Explore);
+            }
+          } else if (urlView === AppView.Profile) {
+            const email = params.get('email');
+            if (email) {
+              setViewingUserEmail(email);
+              setView(AppView.Profile);
+            } else {
+              setView(AppView.Explore);
+            }
+          } else {
+            setView(urlView);
+          }
+        }
+      } catch (error) {
+        console.error("Error inicializando:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    initApp();
+
+    // Manejar botones atrás/adelante del navegador
+    const handlePopState = (event: PopStateEvent) => {
+      const params = new URLSearchParams(window.location.search);
+      const urlView = params.get('view') as AppView;
+      if (urlView) {
+        setView(urlView);
+        if (urlView === AppView.Detail) {
+          const id = params.get('id');
+          // El recurso se buscará en el estado actual en el siguiente renderizado
+        }
+      } else {
+        setView(AppView.Home);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Actualizar el título de la pestaña del navegador
+  useEffect(() => {
+    if (view === AppView.Detail && selectedResource) {
+      document.title = `${selectedResource.title} | NOGALESPT`;
+    } else if (view === AppView.Profile && viewingUserEmail) {
+      const user = users.find(u => u.email === viewingUserEmail);
+      document.title = user ? `${user.name} | NOGALESPT` : 'Docente | NOGALESPT';
+    } else {
+      document.title = 'NOGALESPT - Repositorio Colaborativo';
+    }
+  }, [view, selectedResource, viewingUserEmail, users]);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    });
+  };
+
+  const copyResourceLink = () => {
+    if (!selectedResource) return;
+    const url = `${window.location.origin}${window.location.pathname}?view=detail&id=${selectedResource.id}`;
+    copyToClipboard(url);
+  };
+
+  const copyProfileLink = (email: string) => {
+    const url = `${window.location.origin}${window.location.pathname}?view=profile&email=${email}`;
+    copyToClipboard(url);
+  };
 
   useEffect(() => {
     if (!editingResourceId) {
@@ -111,48 +235,6 @@ const App: React.FC = () => {
       });
     }
   }, [currentUser]);
-
-  useEffect(() => {
-    const initApp = async () => {
-      try {
-        const [resData, usersData, msgData] = await Promise.all([
-          dbService.getResources().catch(() => []),
-          dbService.getUsers().catch(() => []),
-          dbService.getMessages().catch(() => [])
-        ]);
-        setResources(resData || []);
-        setUsers(usersData || []);
-        setMessages(msgData || []);
-        
-        const stored = localStorage.getItem('nogalespt_current_user');
-        if (stored) setCurrentUser(JSON.parse(stored));
-      } catch (error) {
-        console.error("Error inicializando:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    initApp();
-
-    const handleFullscreenChange = () => {
-      const isNativeFull = !!document.fullscreenElement;
-      if (!isNativeFull && isFullScreen) {
-        setIsFullScreen(false);
-        document.body.style.overflow = '';
-      }
-    };
-
-    const events = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
-    events.forEach(event => document.addEventListener(event, handleFullscreenChange));
-    
-    return () => {
-      events.forEach(event => document.removeEventListener(event, handleFullscreenChange));
-    };
-  }, [isFullScreen]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, selectedChatPartner, view]);
 
   const themeClasses = {
     bg: activeCategory === 'PT-AL' ? 'bg-indigo-600' : 'bg-emerald-600',
@@ -188,16 +270,12 @@ const App: React.FC = () => {
       } else if ((container as any).webkitRequestFullscreen) {
         (container as any).webkitRequestFullscreen();
       }
-      
       setIsFullScreen(true);
       document.body.style.overflow = 'hidden';
     } else {
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
-      } else if ((document as any).webkitExitFullscreen) {
-        (document as any).webkitExitFullscreen();
       }
-      
       setIsFullScreen(false);
       document.body.style.overflow = '';
     }
@@ -351,7 +429,7 @@ const App: React.FC = () => {
     await dbService.saveResource(newRes);
     setResources(prev => editingResourceId ? prev.map(r => r.id === editingResourceId ? newRes : r) : [newRes, ...prev]);
     alert(editingResourceId ? "¡Material actualizado!" : "¡Material publicado!");
-    if (editingResourceId) { setSelectedResource(newRes); navigateTo(AppView.Detail); } else { setView(AppView.Explore); }
+    if (editingResourceId) { setSelectedResource(newRes); navigateTo(AppView.Detail, { id: newRes.id }); } else { navigateTo(AppView.Explore); }
     resetForm();
   };
 
@@ -467,7 +545,7 @@ const App: React.FC = () => {
 
   const handleViewProfile = (email: string) => {
     setViewingUserEmail(email);
-    navigateTo(AppView.Profile);
+    navigateTo(AppView.Profile, { email });
   };
 
   const handleCourseToggle = (course: string) => {
@@ -477,15 +555,6 @@ const App: React.FC = () => {
         ? prev.courses.filter(c => c !== course) 
         : [...prev.courses, course]
     }));
-  };
-
-  const navigateTo = (newView: AppView) => {
-    setView(newView);
-    setIsMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (newView !== AppView.Upload && newView !== AppView.Profile && newView !== AppView.Detail && newView !== AppView.Messages) {
-      resetForm();
-    }
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -566,6 +635,14 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">
+      {/* Notificación Toast para copia de enlace */}
+      {copySuccess && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] bg-emerald-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <Check size={18} />
+          <span className="text-xs font-black uppercase tracking-widest">Enlace copiado al portapapeles</span>
+        </div>
+      )}
+
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-[50] h-16 flex items-center shadow-sm">
         <div className="max-w-7xl mx-auto px-4 w-full flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigateTo(AppView.Home)}>
@@ -635,6 +712,7 @@ const App: React.FC = () => {
               </div>
             </div>
 
+            {/* Filtros */}
             <div className="bg-white p-4 md:p-6 rounded-[24px] border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
               <div className="flex items-center gap-2 text-slate-400 mr-2">
                 <Filter size={18} />
@@ -642,7 +720,6 @@ const App: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
                 <div className="relative">
-                  {/* Fixed GradIcon error: replaced with GraduationCap */}
                   <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                   <select 
                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl text-[10px] font-black uppercase tracking-widest appearance-none cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -693,10 +770,15 @@ const App: React.FC = () => {
               )}
             </div>
 
+            {/* Listado de Recursos */}
             {filteredResources.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {filteredResources.map(res => (
-                  <div key={res.id} onClick={() => { setSelectedResource(res); navigateTo(AppView.Detail); }} className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl transition-all group flex flex-col h-full cursor-pointer hover:-translate-y-1">
+                  <div 
+                    key={res.id} 
+                    onClick={() => { setSelectedResource(res); navigateTo(AppView.Detail, { id: res.id }); }} 
+                    className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl transition-all group flex flex-col h-full cursor-pointer hover:-translate-y-1"
+                  >
                     <div className="relative h-44 overflow-hidden"><img src={res.thumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" /></div>
                     <div className="p-5 flex flex-col flex-grow">
                       <div className={`text-[10px] font-black ${themeClasses.text} uppercase mb-2`}>{res.subject}</div>
@@ -726,8 +808,13 @@ const App: React.FC = () => {
             <div className="bg-white p-8 md:p-16 rounded-[40px] shadow-sm border border-slate-100 flex flex-col md:flex-row gap-12 items-center md:items-start text-center md:text-left">
               <img src={activeProfile.avatar || `https://ui-avatars.com/api/?name=${activeProfile.name}&background=random`} className="w-40 h-40 md:w-56 md:h-56 rounded-[48px] object-cover border-8 border-slate-50 shadow-2xl" alt=""/>
               <div className="flex-1 space-y-6">
-                <div className="space-y-2">
-                  <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter">{activeProfile.name} {activeProfile.lastName}</h2>
+                <div className="space-y-4">
+                  <div className="flex flex-col md:flex-row md:items-center gap-4">
+                    <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter">{activeProfile.name} {activeProfile.lastName}</h2>
+                    <button onClick={() => copyProfileLink(activeProfile.email)} className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all w-fit shadow-sm">
+                      <Copy size={14} /> Copiar Perfil
+                    </button>
+                  </div>
                   <p className="text-slate-400 font-bold uppercase tracking-widest text-sm flex items-center justify-center md:justify-start gap-2"><AtSign size={16} className={themeClasses.text}/> {activeProfile.email}</p>
                 </div>
                 {activeProfile.bio && <p className="text-lg text-slate-600 leading-relaxed font-medium">{activeProfile.bio}</p>}
@@ -765,7 +852,7 @@ const App: React.FC = () => {
               <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Materiales de este <span className={themeClasses.text}>Docente</span></h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {profileResources.map(res => (
-                  <div key={res.id} onClick={() => { setSelectedResource(res); navigateTo(AppView.Detail); }} className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl transition-all group cursor-pointer">
+                  <div key={res.id} onClick={() => { setSelectedResource(res); navigateTo(AppView.Detail, { id: res.id }); }} className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl transition-all group cursor-pointer">
                     <div className="h-40 overflow-hidden"><img src={res.thumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt="" /></div>
                     <div className="p-4"><h4 className="font-bold text-slate-800 text-sm mb-2 truncate">{res.title}</h4><div className={`text-[10px] font-black ${themeClasses.text} uppercase`}>{res.subject}</div></div>
                   </div>
@@ -777,7 +864,6 @@ const App: React.FC = () => {
 
         {view === AppView.Messages && currentUser && (
           <div className="max-w-6xl mx-auto h-[75vh] flex flex-col md:flex-row gap-6 animate-in slide-in-from-bottom-8 duration-500">
-            {/* Lista de Conversaciones */}
             <div className="w-full md:w-80 lg:w-96 bg-white rounded-[32px] border border-slate-200 shadow-sm flex flex-col overflow-hidden">
               <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                 <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Mensajes</h2>
@@ -809,11 +895,9 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Ventana de Chat */}
             <div className="flex-1 bg-white rounded-[32px] border border-slate-200 shadow-sm flex flex-col overflow-hidden">
               {selectedChatPartner ? (
                 <>
-                  {/* Header Chat */}
                   <div className="p-4 md:p-6 border-b border-slate-100 flex items-center justify-between bg-white z-10">
                     <div className="flex items-center gap-4 cursor-pointer" onClick={() => handleViewProfile(selectedChatPartner)}>
                       <img 
@@ -830,7 +914,6 @@ const App: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Historial Chat */}
                   <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/30">
                     {activeChatMessages.map((m, idx) => {
                       const isMe = m.from === currentUser.email;
@@ -860,7 +943,6 @@ const App: React.FC = () => {
                     <div ref={messagesEndRef} />
                   </div>
 
-                  {/* Input Chat */}
                   <div className="p-4 md:p-6 border-t border-slate-100 bg-white">
                     <form onSubmit={handleSendMessage} className="relative">
                       <input 
@@ -999,7 +1081,6 @@ const App: React.FC = () => {
                     </form>
                   </div>
 
-                  {/* Seguridad / Cambio de Contraseña */}
                   <div className="bg-white p-8 md:p-10 rounded-[40px] shadow-sm border border-slate-100 flex flex-col gap-6">
                     <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
                       <KeyRound size={18} className={themeClasses.text} /> Seguridad de la Cuenta
@@ -1054,7 +1135,7 @@ const App: React.FC = () => {
                   </div>
 
                   <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-4 tracking-widest">Cursos Destinatarios (Selección Múltiple)</label>
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-4 tracking-widest">Cursos Destinatarios</label>
                     <div className="flex flex-wrap gap-2">
                       {COURSES_BY_LEVEL[formData.level].map(course => (
                         <button 
@@ -1094,12 +1175,17 @@ const App: React.FC = () => {
           <div className="animate-in fade-in duration-300 space-y-8">
             <div className="flex items-center justify-between gap-4">
               <button onClick={() => navigateTo(AppView.Explore)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900 transition-colors"><ArrowLeft size={18}/> Volver</button>
-              {currentUser?.email === selectedResource.email && (
-                <div className="flex gap-3">
-                  <button onClick={() => handleEditResource(selectedResource)} className="px-6 py-3 bg-indigo-50 text-indigo-600 rounded-2xl font-black text-[10px] uppercase shadow-sm"><Edit3 size={16} className="inline mr-2"/> Editar</button>
-                  <button onClick={() => handleDeleteResource(selectedResource.id)} className="px-6 py-3 bg-red-50 text-red-600 rounded-2xl font-black text-[10px] uppercase shadow-sm"><Trash2 size={16} className="inline mr-2"/> Borrar</button>
-                </div>
-              )}
+              <div className="flex gap-3">
+                <button onClick={copyResourceLink} className="inline-flex items-center gap-2 px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-2xl font-black text-[10px] uppercase shadow-sm hover:bg-slate-50 transition-all">
+                  <Copy size={16} /> Copiar Enlace
+                </button>
+                {currentUser?.email === selectedResource.email && (
+                  <>
+                    <button onClick={() => handleEditResource(selectedResource)} className="px-6 py-3 bg-indigo-50 text-indigo-600 rounded-2xl font-black text-[10px] uppercase shadow-sm"><Edit3 size={16} className="inline mr-2"/> Editar</button>
+                    <button onClick={() => handleDeleteResource(selectedResource.id)} className="px-6 py-3 bg-red-50 text-red-600 rounded-2xl font-black text-[10px] uppercase shadow-sm"><Trash2 size={16} className="inline mr-2"/> Borrar</button>
+                  </>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-6">
@@ -1152,7 +1238,7 @@ const App: React.FC = () => {
                     </div>
                     <span className="text-[10px] font-black text-slate-400 uppercase">Valoración: {selectedResource.rating}/5</span>
                   </div>
-                  <button className="w-full py-4 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest"><Download size={16} className="inline mr-2" /> Descargar</button>
+                  <button className="w-full py-4 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-md hover:scale-[1.02] active:scale-95 transition-all"><Download size={16} className="inline mr-2" /> Descargar Material</button>
                 </div>
               </div>
             </div>
@@ -1168,7 +1254,7 @@ const App: React.FC = () => {
               {(Object.entries(teacherRankings) as [string, any[]][]).map(([level, teachers]) => (
                 <div key={level} className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm flex flex-col hover:shadow-xl transition-all duration-500">
                   <div className="flex items-center gap-3 mb-8">
-                    <div className={`${themeClasses.bg} p-2 rounded-xl text-white`}><Trophy size={18} /></div>
+                    <div className={`${themeClasses.bg} p-2 rounded-xl text-white shadow-md`}><Trophy size={18} /></div>
                     <h3 className="text-sm font-black uppercase text-slate-900 tracking-widest">{level}</h3>
                   </div>
                   <div className="space-y-6">
@@ -1177,12 +1263,12 @@ const App: React.FC = () => {
                         <img src={teacher.user.avatar} className="w-12 h-12 rounded-full border-2 border-white shadow-md object-cover" alt=""/>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-slate-800 text-sm truncate group-hover:text-indigo-600 transition-colors">{teacher.user.name}</h4>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">{teacher.count} recursos</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">{teacher.count} recursos compartidos</p>
                         </div>
                         <div className="text-amber-500 font-black text-xs flex items-center gap-1"><Star size={14} fill="currentColor"/> {teacher.avgRating.toFixed(1)}</div>
                       </div>
                     ))}
-                    {teachers.length === 0 && <p className="text-xs font-bold text-slate-400 uppercase text-center py-4 italic">Sin datos</p>}
+                    {teachers.length === 0 && <p className="text-xs font-bold text-slate-400 uppercase text-center py-4 italic">Sin datos registrados aún</p>}
                   </div>
                 </div>
               ))}
@@ -1194,7 +1280,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t border-slate-200 py-12 mt-24">
         <div className="max-w-7xl mx-auto px-4 text-center space-y-4">
           <div className="flex items-center justify-center gap-2 mb-2"><GraduationCap size={24} className={themeClasses.text} /><span className="text-xl font-black uppercase tracking-tighter">NOGALES<span className={themeClasses.text}>PT</span></span></div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em]">© 2025 • Repositorio REA Andalucía • Conectando Docentes</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em]">© 2025 • Repositorio Colaborativo • REA Andalucía</p>
         </div>
       </footer>
     </div>
