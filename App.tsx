@@ -23,6 +23,32 @@ const stripHtml = (html: string) => {
   return tmp.textContent || tmp.innerText || "";
 };
 
+/**
+ * Detecta enlaces de YouTube y los convierte en iFrames responsivos
+ */
+const renderContentWithVideos = (content: string) => {
+  if (!content) return "";
+  
+  // Regex para detectar diversos formatos de enlaces de YouTube
+  const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})(?:[^\s<]*)/g;
+  
+  return content.replace(youtubeRegex, (match, videoId) => {
+    return `
+      <div class="my-8 aspect-video w-full rounded-[32px] overflow-hidden shadow-2xl bg-slate-900 border-4 border-white">
+        <iframe
+          src="https://www.youtube.com/embed/${videoId}"
+          title="YouTube video player"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen
+          class="w-full h-full"
+        ></iframe>
+      </div>
+    `;
+  });
+};
+
 // --- COMPONENTES AUXILIARES ---
 const RichTextEditor = ({ value, onChange, themeClasses }: { value: string, onChange: (val: string) => void, themeClasses: any }) => {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -631,7 +657,14 @@ const App: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
               <div className="lg:col-span-2 space-y-8">
                 <div ref={resourceContainerRef} className="aspect-video bg-slate-900 rounded-[40px] shadow-2xl overflow-hidden relative"><iframe src={selectedResource.pastedCode ? '' : selectedResource.contentUrl} srcDoc={selectedResource.pastedCode} className="w-full h-full border-none bg-white" title={selectedResource.title} /><button onClick={handleMaximize} className="absolute bottom-8 right-8 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:scale-105"><Maximize2 size={24} /></button></div>
-                <div className="bg-white p-10 md:p-14 rounded-[48px] shadow-sm border border-slate-100"><h1 className="text-4xl font-black text-slate-900 mb-8 leading-tight">{selectedResource.title}</h1><div className="text-slate-600 leading-relaxed text-lg prose prose-indigo max-w-none mb-12" dangerouslySetInnerHTML={{ __html: selectedResource.summary }} /><div className="flex flex-wrap gap-3"><span className={`px-5 py-2.5 ${themeClasses.softBg} ${themeClasses.softText} rounded-full text-[10px] font-black uppercase tracking-widest`}>{selectedResource.subject}</span><span className="px-5 py-2.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">{selectedResource.level}</span></div></div>
+                <div className="bg-white p-10 md:p-14 rounded-[48px] shadow-sm border border-slate-100">
+                  <h1 className="text-4xl font-black text-slate-900 mb-8 leading-tight">{selectedResource.title}</h1>
+                  <div className="text-slate-600 leading-relaxed text-lg prose prose-indigo max-w-none mb-12" dangerouslySetInnerHTML={{ __html: renderContentWithVideos(selectedResource.summary) }} />
+                  <div className="flex flex-wrap gap-3">
+                    <span className={`px-5 py-2.5 ${themeClasses.softBg} ${themeClasses.softText} rounded-full text-[10px] font-black uppercase tracking-widest`}>{selectedResource.subject}</span>
+                    <span className="px-5 py-2.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">{selectedResource.level}</span>
+                  </div>
+                </div>
               </div>
               <div className="space-y-8"><div className="bg-white p-10 rounded-[48px] shadow-sm border border-slate-100 text-center space-y-8"><div className="cursor-pointer group" onClick={() => { setViewingUserEmail(selectedResource.email); navigateTo(AppView.Profile, { user: selectedResource.email }); }}><img src={users.find(u => u.email === selectedResource.email)?.avatar || `https://ui-avatars.com/api/?name=${selectedResource.authorName}`} className="w-28 h-28 rounded-[36px] mx-auto shadow-xl object-cover" /><h3 className="font-black text-slate-900 text-xl mt-6">{selectedResource.authorName}</h3><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Autoría verificada</p></div><div className="flex flex-col gap-4 border-t border-slate-50 pt-8"><div className="flex justify-center gap-3">{[1, 2, 3, 4, 5].map(v => (<button key={v} onClick={async () => { const resToRate = resources.find(r => r.id === selectedResource.id); if (!resToRate) return; const currentCount = resToRate.ratingCount || 1; const currentRating = resToRate.rating || 0; const updatedRating = ((currentRating * currentCount) + v) / (currentCount + 1); const updatedResource: Resource = { ...resToRate, rating: Number(updatedRating.toFixed(1)), ratingCount: currentCount + 1 }; setResources(prev => prev.map(r => r.id === selectedResource.id ? updatedResource : r)); setSelectedResource(updatedResource); await dbService.saveResource(updatedResource); }} className="text-slate-100 hover:text-amber-500"><Star size={28} fill={v <= Math.round(selectedResource.rating) ? 'currentColor' : 'none'} className={v <= Math.round(selectedResource.rating) ? 'text-amber-500' : 'text-slate-200'} /></button>))}</div><p className="text-[10px] font-bold text-slate-400 uppercase">Valora</p></div><a href={selectedResource.contentUrl} target="_blank" rel="noopener noreferrer" className="block w-full py-5 bg-slate-900 text-white rounded-[24px] font-black uppercase text-[10px] tracking-widest shadow-xl">Original Externo</a></div></div>
             </div>

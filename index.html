@@ -4,69 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- SEO AVANZADO: Título optimizado (55-60 chars) -->
     <title>Recursos PT y AL: Materiales para Maestros | NogalesPT</title>
     
-    <!-- Meta Descripción (aprox 150 chars con CTA) -->
-    <meta name="description" content="Descarga recursos gratuitos de PT y AL en NogalesPT. El repositorio colaborativo de materiales de calidad para maestros de educación especial en España. ¡Únete!">
-    
-    <!-- Palabras Clave Estratégicas -->
-    <meta name="keywords" content="recursos PT, materiales AL, pedagogía terapéutica, audición y lenguaje, educación especial España, adaptaciones curriculares, maestros PT, NogalesPT">
-    <meta name="author" content="NogalesPT">
-    <meta name="robots" content="index, follow">
+    <meta name="description" content="Descarga recursos gratuitos de PT y AL en NogalesPT. Repositorio colaborativo para maestros de educación especial.">
     <meta name="theme-color" content="#4f46e5">
 
-    <!-- OPEN GRAPH: Optimización para Redes Sociales (WhatsApp, Facebook, LinkedIn) -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://nogalespt.com/">
-    <meta property="og:title" content="NogalesPT: La mayor comunidad de maestros de PT y AL">
-    <meta property="og:description" content="¿Buscas materiales para tus alumnos? Accede gratis a cientos de recursos de Pedagogía Terapéutica y Audición y Lenguaje.">
-    <!-- Imagen educativa atractiva (Placeholder de alta calidad) -->
-    <meta property="og:image" content="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=1200&auto=format&fit=crop">
-    <meta property="og:site_name" content="NogalesPT">
-    <meta property="og:locale" content="es_ES">
-
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Materiales para Maestros de PT y AL | NogalesPT">
-    <meta name="twitter:description" content="Recursos didácticos y adaptaciones curriculares compartidas por la comunidad docente de Educación Especial.">
-    <meta name="twitter:image" content="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=1200&auto=format&fit=crop">
-
-    <!-- Configuración Técnica y Estilos (MANTENER INTACTO) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <style>
+        /* Fuentes del sistema para evitar el bloqueo de Google Fonts en el colegio */
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #f8fafc;
             margin: 0;
             -webkit-font-smoothing: antialiased;
         }
-        /* Scrollbar Personalizado */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 
     <script>
-      // Mock de process para compatibilidad con el SDK de Gemini
       window.process = { env: { API_KEY: '' } };
     </script>
 
@@ -89,10 +48,7 @@
     </script>
 </head>
 <body>
-    <!-- Contenedor principal de React -->
     <div id="root"></div>
-    
-    <!-- Script de entrada de la aplicación -->
     <script type="module" src="./index.tsx"></script>
 </body>
 </html>
