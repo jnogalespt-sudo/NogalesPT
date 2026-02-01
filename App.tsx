@@ -92,7 +92,6 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
-  const [isFullScreen, setIsFullScreen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
 
@@ -111,7 +110,6 @@ const App: React.FC = () => {
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false);
 
   const resourceContainerRef = useRef<HTMLDivElement>(null);
 
@@ -312,17 +310,12 @@ const App: React.FC = () => {
   };
 
   // --- Manejo del botón de maximizar ---
+  // AHORA ESTÁ ESTANDARIZADO PARA TODOS LOS DISPOSITIVOS (IGUAL QUE MÓVIL)
   const handleMaximize = () => {
     if (!selectedResource) return;
-    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 1024;
-    
-    if (isMobileDevice) {
-      // Abre en una nueva pestaña funcional y compartible
-      const url = `${window.location.origin}${window.location.pathname}?standalone=true&id=${selectedResource.id}`;
-      window.open(url, '_blank');
-    } else {
-      setIsFullScreen(!isFullScreen);
-    }
+    // Abre siempre en una pestaña funcional y compartible
+    const url = `${window.location.origin}${window.location.pathname}?standalone=true&id=${selectedResource.id}`;
+    window.open(url, '_blank');
   };
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-white flex-col gap-6">
@@ -379,6 +372,39 @@ const App: React.FC = () => {
           <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}><Menu size={24} /></button>
         </div>
       </nav>
+
+      {/* Mobile Menu Overlay */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 z-[100] md:hidden">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)} />
+          <div className="absolute right-0 top-0 bottom-0 w-80 bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="p-6 flex justify-between items-center border-b">
+              <span className="text-xl font-black uppercase tracking-tighter">MENÚ</span>
+              <button onClick={() => setIsMenuOpen(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={24} /></button>
+            </div>
+            <div className="flex-1 p-6 space-y-6">
+              <button onClick={() => navigateTo(AppView.Explore)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600 transition-colors">
+                <LayoutGrid size={20} /> Explorar
+              </button>
+              <button onClick={() => navigateTo(AppView.TopDocentes)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600 transition-colors">
+                <Trophy size={20} /> Ranking
+              </button>
+              <button onClick={() => navigateTo(AppView.Upload)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600 transition-colors">
+                <Upload size={20} /> Subir Material
+              </button>
+              <button onClick={() => navigateTo(AppView.Account)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600 transition-colors">
+                <UserCircle size={20} /> Mi Cuenta
+              </button>
+            </div>
+            <div className="p-8 border-t bg-slate-50">
+               <div className="flex items-center gap-3">
+                 <div className={`${themeClasses.bg} p-2 rounded-xl text-white`}><GraduationCap size={20} /></div>
+                 <span className="text-sm font-black uppercase tracking-tighter text-slate-900">NOGALES<span className={themeClasses.text}>PT</span></span>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Category Tabs */}
       <div className="bg-white border-b border-slate-200 sticky top-16 z-[40]">
@@ -624,10 +650,10 @@ const App: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
               <div className="lg:col-span-2 space-y-8">
-                <div ref={resourceContainerRef} className={`${isFullScreen ? 'fixed inset-0 z-[9999] bg-black' : 'aspect-video bg-slate-900 rounded-[40px] shadow-2xl'} overflow-hidden relative`}>
+                <div ref={resourceContainerRef} className="aspect-video bg-slate-900 rounded-[40px] shadow-2xl overflow-hidden relative">
                   <iframe src={selectedResource.pastedCode ? '' : selectedResource.contentUrl} srcDoc={selectedResource.pastedCode} className="w-full h-full border-none bg-white" title={selectedResource.title} />
                   <button onClick={handleMaximize} className="absolute bottom-8 right-8 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:scale-105 transition-all">
-                    {isFullScreen ? <Minimize size={24} /> : <Maximize2 size={24} />}
+                    <Maximize2 size={24} />
                   </button>
                 </div>
                 <div className="bg-white p-10 md:p-14 rounded-[48px] shadow-sm border border-slate-100">
