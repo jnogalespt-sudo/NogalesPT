@@ -168,13 +168,20 @@ const App: React.FC = () => {
     setIsMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Actualizar la URL del navegador
-    const searchParams = new URLSearchParams();
-    searchParams.set('view', newView);
-    if (params.id) searchParams.set('id', params.id);
-    if (params.user) searchParams.set('user', params.user);
-    searchParams.set('category', activeCategory);
-    window.history.pushState({}, '', `?${searchParams.toString()}`);
+    // Actualizar la URL del navegador de forma segura con try-catch
+    try {
+      const searchParams = new URLSearchParams();
+      searchParams.set('view', newView);
+      if (params.id) searchParams.set('id', params.id);
+      if (params.user) searchParams.set('user', params.user);
+      searchParams.set('category', activeCategory);
+      // Usamos el search string directamente
+      window.history.pushState({}, '', `?${searchParams.toString()}`);
+    } catch (e) {
+      // Si pushState falla (ej. por restricciones de origen en entornos sandbox),
+      // registramos el aviso pero permitimos que la navegación interna continúe
+      console.warn("Navegación URL limitada por restricciones de seguridad del entorno.");
+    }
 
     if (newView !== AppView.Upload && newView !== AppView.Profile && newView !== AppView.Detail) {
       resetForm();
