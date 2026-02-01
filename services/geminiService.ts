@@ -1,17 +1,19 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// Initialize the Google GenAI SDK with the API key from environment variables.
-// Using GoogleGenAI according to the latest library guidelines.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
+/**
+ * Servicio de IA optimizado para el repositorio NOGALESPT.
+ * Proporciona asistencia pedagógica y consejos de adaptación curricular.
+ */
 export const geminiService = {
   /**
-   * Generates a conversational response from Gemini.
-   * Uses the 'gemini-3-flash-preview' model for efficient and fast text generation.
+   * Genera una respuesta conversacional desde Gemini.
    */
   async generateResponse(message: string) {
     try {
+      // Inicialización dentro del método para evitar errores de acceso a process.env en la carga del módulo
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: message,
@@ -21,7 +23,6 @@ export const geminiService = {
         },
       });
       
-      // Accessing the .text property directly from GenerateContentResponse as per guidelines.
       return response.text;
     } catch (error) {
       console.error("Gemini API Error:", error);
@@ -30,10 +31,11 @@ export const geminiService = {
   },
 
   /**
-   * Specialized function for resource-based suggestions.
+   * Función especializada para sugerencias basadas en recursos.
    */
   async getResourceAdvice(resourceTitle: string, summary: string, level: string) {
     try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const prompt = `Analiza este recurso educativo titulado "${resourceTitle}" para el nivel "${level}" con el resumen "${summary}". Sugiere 3 formas creativas de adaptarlo para alumnos con Necesidades Específicas de Apoyo Educativo (NEAE).`;
       
       const response = await ai.models.generateContent({
