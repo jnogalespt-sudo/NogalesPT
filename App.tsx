@@ -127,10 +127,33 @@ const App: React.FC = () => {
     instagram: '', linkedin: '', tiktok: '', twitter: '', website: ''
   });
 
-  // --- Manejo de modo Standalone para compartir ---
+  // --- LÓGICA DE URL ---
   const urlParams = new URLSearchParams(window.location.search);
   const isStandalone = urlParams.get('standalone') === 'true';
   const standaloneId = urlParams.get('id');
+
+  const navigateTo = (newView: AppView, params: Record<string, string> = {}) => {
+    if (newView === AppView.Upload && !currentUser) {
+      setAuthError("Debes registrarte para compartir recursos.");
+      setView(AppView.Account);
+      return;
+    }
+    setView(newView);
+    setIsMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Actualizar la URL del navegador
+    const searchParams = new URLSearchParams();
+    searchParams.set('view', newView);
+    if (params.id) searchParams.set('id', params.id);
+    if (params.user) searchParams.set('user', params.user);
+    searchParams.set('category', activeCategory);
+    window.history.pushState({}, '', `?${searchParams.toString()}`);
+
+    if (newView !== AppView.Upload && newView !== AppView.Profile && newView !== AppView.Detail) {
+      resetForm();
+    }
+  };
 
   const themeClasses = useMemo(() => {
     return activeCategory === 'General'
@@ -185,20 +208,6 @@ const App: React.FC = () => {
     return url;
   };
 
-  const navigateTo = (newView: AppView, params: Record<string, string> = {}) => {
-    if (newView === AppView.Upload && !currentUser) {
-      setAuthError("Debes registrarte para compartir recursos.");
-      setView(AppView.Account);
-      return;
-    }
-    setView(newView);
-    setIsMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (newView !== AppView.Upload && newView !== AppView.Profile && newView !== AppView.Detail) {
-      resetForm();
-    }
-  };
-
   useEffect(() => {
     const initApp = async () => {
       try {
@@ -208,6 +217,8 @@ const App: React.FC = () => {
         ]);
         setResources(resData || []);
         setUsers(usersData || []);
+        
+        // Restaurar sesión
         const stored = localStorage.getItem('nogalespt_current_user');
         if (stored) {
           const parsedUser = JSON.parse(stored);
@@ -216,9 +227,36 @@ const App: React.FC = () => {
             setProfileForm(parsedUser);
           }
         }
+
+        // Restaurar estado desde URL
+        const params = new URLSearchParams(window.location.search);
+        const viewParam = params.get('view') as AppView;
+        const idParam = params.get('id');
+        const userParam = params.get('user');
+        const catParam = params.get('category') as MainCategory;
+
+        if (catParam) setActiveCategory(catParam);
+        if (viewParam) {
+          setView(viewParam);
+          if (viewParam === AppView.Detail && idParam) {
+            const found = resData.find((r: Resource) => r.id === idParam);
+            if (found) setSelectedResource(found);
+          }
+          if (viewParam === AppView.Profile && userParam) {
+            setViewingUserEmail(userParam);
+          }
+        }
       } catch (error) { console.error("Error cargando app:", error); } finally { setIsLoading(false); }
     };
     initApp();
+
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get('view') as AppView;
+      if (viewParam) setView(viewParam);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const copyToClipboard = (text: string) => {
@@ -235,7 +273,6 @@ const App: React.FC = () => {
     }));
   };
 
-  // --- LÓGICA DE EDICIÓN Y ELIMINACIÓN ---
   const handleEditResource = (resource: Resource) => {
     setEditingResourceId(resource.id);
     setFormData({
@@ -261,10 +298,7 @@ const App: React.FC = () => {
       setSelectedResource(null);
       navigateTo(AppView.Explore);
       alert("Recurso eliminado correctamente");
-    } catch (err) {
-      console.error(err);
-      alert("Hubo un error al intentar eliminar el recurso");
-    }
+    } catch (err) { console.error(err); alert("Hubo un error"); }
   };
 
   const teacherRankings = useMemo(() => {
@@ -310,7 +344,7 @@ const App: React.FC = () => {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
-    if (formData.courses.length === 0) return alert("Debes seleccionar al menos un curso destinatario.");
+    if (formData.courses.length === 0) return alert("Selecciona un curso.");
     setIsUploading(true);
     try {
       const cleanUrl = formData.uploadMethod === 'file' ? cleanGoogleDriveUrl(formData.externalUrl) : undefined;
@@ -334,12 +368,11 @@ const App: React.FC = () => {
       };
       await dbService.saveResource(newRes);
       setResources(prev => editingResourceId ? prev.map(r => r.id === editingResourceId ? newRes : r) : [newRes, ...prev]);
-      alert(editingResourceId ? "¡Material actualizado!" : "¡Material compartido con la comunidad!");
+      alert("Material guardado.");
       navigateTo(AppView.Explore);
     } catch (err) { console.error(err); } finally { setIsUploading(false); }
   };
 
-  // --- AUTENTICACIÓN ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
@@ -349,22 +382,14 @@ const App: React.FC = () => {
       setProfileForm(user);
       localStorage.setItem('nogalespt_current_user', JSON.stringify(user));
       navigateTo(AppView.Home);
-    } else {
-      setAuthError("Credenciales incorrectas.");
-    }
+    } else { setAuthError("Credenciales incorrectas."); }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAuthError(null);
-    if (users.some(u => u.email === loginEmail)) {
-      setAuthError("Este email ya está registrado.");
-      return;
-    }
+    if (users.some(u => u.email === loginEmail)) { setAuthError("Ya registrado."); return; }
     const newUser: UserType = {
-      email: loginEmail,
-      name: registerName,
-      password: loginPassword,
+      email: loginEmail, name: registerName, password: loginPassword,
       avatar: `https://ui-avatars.com/api/?name=${registerName}&background=random`
     };
     await dbService.saveUser(newUser);
@@ -372,7 +397,6 @@ const App: React.FC = () => {
     setCurrentUser(newUser);
     setProfileForm(newUser);
     localStorage.setItem('nogalespt_current_user', JSON.stringify(newUser));
-    alert("¡Bienvenido a la comunidad!");
     navigateTo(AppView.Home);
   };
 
@@ -401,10 +425,7 @@ const App: React.FC = () => {
     window.open(url, '_blank');
   };
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-white flex-col gap-6">
-    <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tighter">NOGALES<span className="text-indigo-600">PT</span></h2>
-  </div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-white flex-col gap-6"><div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div><h2 className="text-xl font-black text-slate-800 uppercase tracking-tighter">NOGALES<span className="text-indigo-600">PT</span></h2></div>;
 
   if (isStandalone && standaloneId) {
     const res = resources.find(r => r.id === standaloneId);
@@ -419,13 +440,8 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">
-      {copySuccess && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] bg-emerald-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 animate-in fade-in">
-          <Check size={18} /> <span className="text-xs font-black uppercase">Enlace copiado</span>
-        </div>
-      )}
+      {copySuccess && <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] bg-emerald-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 animate-in fade-in"><Check size={18} /> <span className="text-xs font-black uppercase">Enlace copiado</span></div>}
 
-      {/* Header */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-[50] h-16 flex items-center">
         <div className="max-w-7xl mx-auto px-4 w-full flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigateTo(AppView.Home)}>
@@ -436,39 +452,31 @@ const App: React.FC = () => {
             <button onClick={() => navigateTo(AppView.Explore)} className="text-xs font-black uppercase text-slate-500">Explorar</button>
             <button onClick={() => navigateTo(AppView.TopDocentes)} className="text-xs font-black uppercase text-slate-500">Ranking</button>
             <button onClick={() => navigateTo(AppView.Upload)} className={`${themeClasses.bg} text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2`}><Upload size={16} /> Subir</button>
-            <button onClick={() => navigateTo(AppView.Account)} className="flex items-center gap-2 p-1.5 pr-4 rounded-full border bg-slate-100">
-              {currentUser?.avatar ? <img src={currentUser.avatar} className="w-8 h-8 rounded-full object-cover" /> : <UserIcon size={18} />}
-              <span className="text-[10px] font-black uppercase">{currentUser ? currentUser.name : 'Mi Cuenta'}</span>
-            </button>
+            <button onClick={() => navigateTo(AppView.Account)} className="flex items-center gap-2 p-1.5 pr-4 rounded-full border bg-slate-100">{currentUser?.avatar ? <img src={currentUser.avatar} className="w-8 h-8 rounded-full object-cover" /> : <UserIcon size={18} />}<span className="text-[10px] font-black uppercase">{currentUser ? currentUser.name : 'Mi Cuenta'}</span></button>
           </div>
           <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}><Menu size={24} /></button>
         </div>
       </nav>
 
-      {/* Mobile Menu Overlay */}
       {isMenuOpen && (
         <div className="fixed inset-0 z-[100] md:hidden">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)} />
           <div className="absolute right-0 top-0 bottom-0 w-80 bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="p-6 flex justify-between items-center border-b">
-              <span className="text-xl font-black uppercase tracking-tighter">MENÚ</span>
-              <button onClick={() => setIsMenuOpen(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={24} /></button>
-            </div>
+            <div className="p-6 flex justify-between items-center border-b"><span className="text-xl font-black uppercase tracking-tighter">MENÚ</span><button onClick={() => setIsMenuOpen(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={24} /></button></div>
             <div className="flex-1 p-6 space-y-6">
-              <button onClick={() => navigateTo(AppView.Explore)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600 transition-colors"><LayoutGrid size={20} /> Explorar</button>
-              <button onClick={() => navigateTo(AppView.TopDocentes)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600 transition-colors"><Trophy size={20} /> Ranking</button>
-              <button onClick={() => navigateTo(AppView.Upload)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600 transition-colors"><Upload size={20} /> Subir Material</button>
-              <button onClick={() => navigateTo(AppView.Account)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600 transition-colors"><UserCircle size={20} /> Mi Cuenta</button>
+              <button onClick={() => navigateTo(AppView.Explore)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><LayoutGrid size={20} /> Explorar</button>
+              <button onClick={() => navigateTo(AppView.TopDocentes)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><Trophy size={20} /> Ranking</button>
+              <button onClick={() => navigateTo(AppView.Upload)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><Upload size={20} /> Subir Material</button>
+              <button onClick={() => navigateTo(AppView.Account)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><UserCircle size={20} /> Mi Cuenta</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Category Tabs */}
       <div className="bg-white border-b border-slate-200 sticky top-16 z-[40]">
         <div className="max-w-7xl mx-auto flex overflow-x-auto no-scrollbar">
-          <button onClick={() => setActiveCategory('General')} className={`flex-1 min-w-[180px] py-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase border-b-2 ${activeCategory === 'General' ? 'text-emerald-600 border-emerald-600 bg-emerald-50' : 'text-slate-400 border-transparent'}`}><BookOpen size={16} /> General</button>
-          <button onClick={() => setActiveCategory('PT-AL')} className={`flex-1 min-w-[180px] py-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase border-b-2 ${activeCategory === 'PT-AL' ? 'text-indigo-600 border-indigo-600 bg-indigo-50' : 'text-slate-400 border-transparent'}`}><BrainCircuit size={16} /> PT y AL</button>
+          <button onClick={() => { setActiveCategory('General'); navigateTo(AppView.Explore); }} className={`flex-1 min-w-[180px] py-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase border-b-2 ${activeCategory === 'General' ? 'text-emerald-600 border-emerald-600 bg-emerald-50' : 'text-slate-400 border-transparent'}`}><BookOpen size={16} /> General</button>
+          <button onClick={() => { setActiveCategory('PT-AL'); navigateTo(AppView.Explore); }} className={`flex-1 min-w-[180px] py-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase border-b-2 ${activeCategory === 'PT-AL' ? 'text-indigo-600 border-indigo-600 bg-indigo-50' : 'text-slate-400 border-transparent'}`}><BrainCircuit size={16} /> PT y AL</button>
         </div>
       </div>
 
@@ -487,13 +495,13 @@ const App: React.FC = () => {
               <h2 className="text-3xl font-black text-slate-900 uppercase">Explorar <span className={themeClasses.text}>{activeCategory}</span></h2>
               <div className="relative w-full md:w-96">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input type="text" placeholder="Buscar por título o autor..." className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white border border-slate-200 font-bold shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                <input type="text" placeholder="Buscar..." className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white border border-slate-200 font-bold shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {filteredResources.map(res => (
-                <div key={res.id} onClick={() => { setSelectedResource(res); navigateTo(AppView.Detail); }} className="bg-white rounded-[24px] border border-slate-200 overflow-hidden hover:shadow-xl transition-all group cursor-pointer flex flex-col">
-                  <div className="h-44 overflow-hidden"><img src={res.thumbnail} className="w-full h-full object-cover group-hover:scale-105 transition-transform" /></div>
+                <div key={res.id} onClick={() => { setSelectedResource(res); navigateTo(AppView.Detail, { id: res.id }); }} className="bg-white rounded-[24px] border border-slate-200 overflow-hidden hover:shadow-xl transition-all group cursor-pointer flex flex-col">
+                  <div className="h-44 overflow-hidden"><img src={res.thumbnail} className="w-full h-full object-cover group-hover:scale-105" /></div>
                   <div className="p-5 flex flex-col flex-grow">
                     <div className={`text-[10px] font-black ${themeClasses.text} uppercase mb-2`}>{res.subject}</div>
                     <h3 className="font-bold text-slate-800 text-sm mb-3 line-clamp-2">{res.title}</h3>
@@ -509,57 +517,97 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {view === AppView.TopDocentes && (
+          <div className="space-y-12 animate-in fade-in duration-500">
+            <header className="text-center space-y-4">
+              <h2 className="text-3xl font-black text-slate-900 uppercase">Muro de <span className={themeClasses.text}>Excelencia</span></h2>
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Maestros que más aportan</p>
+            </header>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {(Object.entries(teacherRankings) as [string, any[]][]).map(([level, teachers]) => (
+                <div key={level} className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm">
+                  <div className="flex items-center gap-3 mb-8"><div className={`${themeClasses.bg} p-2 rounded-xl text-white shadow-md`}><Trophy size={18} /></div><h3 className="text-sm font-black uppercase text-slate-900 tracking-widest">{level}</h3></div>
+                  <div className="space-y-6">
+                    {teachers.map(teacher => (
+                      <div key={teacher.user.email} className="flex items-center gap-4 cursor-pointer group" onClick={() => { setViewingUserEmail(teacher.user.email); navigateTo(AppView.Profile, { user: teacher.user.email }); }}>
+                        <img src={teacher.user.avatar} className="w-12 h-12 rounded-full border-2 border-white shadow-md object-cover" />
+                        <div className="flex-1 min-w-0"><h4 className="font-bold text-slate-800 text-sm truncate">{teacher.user.name}</h4><p className="text-[10px] font-bold text-slate-400 uppercase">{teacher.count} recursos</p></div>
+                        <div className="text-amber-500 font-black text-xs flex items-center gap-1"><Star size={14} fill="currentColor"/> {teacher.avgRating.toFixed(1)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {view === AppView.Profile && activeProfile && (
+          <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in duration-500">
+            <button onClick={() => navigateTo(AppView.Explore)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900"><ArrowLeft size={18}/> Volver</button>
+            <div className="bg-white p-8 md:p-16 rounded-[48px] shadow-sm border border-slate-100 flex flex-col md:flex-row gap-12 items-center md:items-start">
+              <img src={activeProfile.avatar || `https://ui-avatars.com/api/?name=${activeProfile.name}`} className="w-40 h-40 md:w-60 md:h-60 rounded-[48px] object-cover border-8 border-slate-50 shadow-2xl" />
+              <div className="flex-1 space-y-6 text-center md:text-left">
+                <h2 className="text-4xl md:text-5xl font-black text-slate-900">{activeProfile.name} {activeProfile.lastName || ''}</h2>
+                <p className="text-slate-400 font-bold uppercase tracking-widest text-sm flex items-center justify-center md:justify-start gap-2"><Mail size={16} className={themeClasses.text}/> {activeProfile.email}</p>
+                {activeProfile.bio && <p className="text-lg text-slate-600 leading-relaxed font-medium">{activeProfile.bio}</p>}
+                <div className="flex flex-wrap gap-4 justify-center md:justify-start pt-4">
+                  <SocialLink platform="instagram" handle={activeProfile.instagram} /><SocialLink platform="linkedin" handle={activeProfile.linkedin} /><SocialLink platform="tiktok" handle={activeProfile.tiktok} /><SocialLink platform="website" handle={activeProfile.website} />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-8">
+              <h3 className="text-2xl font-black text-slate-900 uppercase">Materiales de este <span className={themeClasses.text}>Docente</span></h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {profileResources.map(res => (
+                  <div key={res.id} onClick={() => { setSelectedResource(res); navigateTo(AppView.Detail, { id: res.id }); }} className="bg-white rounded-3xl border border-slate-200 overflow-hidden hover:shadow-xl group cursor-pointer flex flex-col">
+                    <div className="h-44 overflow-hidden"><img src={res.thumbnail} className="w-full h-full object-cover group-hover:scale-110" /></div>
+                    <div className="p-5 flex-1 flex flex-col"><h4 className="font-bold text-slate-800 text-sm mb-2 truncate">{res.title}</h4><div className={`mt-auto text-[10px] font-black ${themeClasses.text} uppercase`}>{res.subject}</div></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {view === AppView.Account && (
           <div className="max-w-5xl mx-auto py-12">
             {!currentUser ? (
               <div className="max-w-md mx-auto bg-white p-12 rounded-[40px] shadow-2xl border border-slate-100 text-center space-y-8">
                 <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Área de <span className={themeClasses.text}>Docentes</span></h2>
                 <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4 text-left">
-                  {isRegistering && (
-                    <input required type="text" value={registerName} onChange={e => setRegisterName(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" placeholder="Tu nombre y apellidos" />
-                  )}
-                  <input required type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" placeholder="Email institucional" />
+                  {isRegistering && <input required type="text" value={registerName} onChange={e => setRegisterName(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" placeholder="Tu nombre" />}
+                  <input required type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" placeholder="Email" />
                   <input required type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" placeholder="Contraseña" />
                   {authError && <p className="text-red-500 text-[10px] font-black uppercase ml-4">{authError}</p>}
-                  <button type="submit" className={`${themeClasses.bg} w-full py-5 rounded-2xl text-white font-black uppercase text-xs shadow-xl tracking-widest`}>
-                    {isRegistering ? 'Crear mi cuenta' : 'Acceder al centro'}
-                  </button>
+                  <button type="submit" className={`${themeClasses.bg} w-full py-5 rounded-2xl text-white font-black uppercase text-xs shadow-xl tracking-widest`}>{isRegistering ? 'Registrarse' : 'Acceder'}</button>
                 </form>
-                <div className="pt-4">
-                  <button onClick={() => { setIsRegistering(!isRegistering); setAuthError(null); }} className="text-[10px] font-black uppercase text-slate-400 hover:text-indigo-600 transition-colors">
-                    {isRegistering ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate aquí'}
-                  </button>
-                </div>
+                <button onClick={() => { setIsRegistering(!isRegistering); setAuthError(null); }} className="text-[10px] font-black uppercase text-slate-400 hover:text-indigo-600 transition-colors">{isRegistering ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}</button>
               </div>
             ) : (
               <div className="space-y-8">
-                <div className="bg-white p-8 md:p-12 rounded-[48px] shadow-sm border border-slate-100 flex flex-col md:flex-row gap-8 items-center">
-                  <img src={currentUser.avatar} className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl" />
-                  <div className="flex-1 text-center md:text-left">
-                    <h2 className="text-3xl font-black text-slate-900">{currentUser.name} {currentUser.lastName}</h2>
+                <div className="bg-white p-8 md:p-12 rounded-[48px] shadow-sm border border-slate-100 flex items-center gap-8">
+                  <img src={currentUser.avatar} className="w-32 h-32 rounded-full border-4 border-white shadow-xl" />
+                  <div className="flex-1">
+                    <h2 className="text-3xl font-black text-slate-900">{currentUser.name}</h2>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{currentUser.email}</p>
                   </div>
                   <button onClick={() => { setCurrentUser(null); localStorage.removeItem('nogalespt_current_user'); navigateTo(AppView.Home); }} className="p-5 bg-red-50 text-red-500 rounded-3xl hover:bg-red-500 hover:text-white transition-all"><LogOut size={24} /></button>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-2 bg-white p-12 rounded-[48px] border border-slate-100 shadow-sm">
-                    <h3 className="text-xs font-black uppercase text-slate-400 mb-8 tracking-widest flex items-center gap-2"><UserCircle size={18} className={themeClasses.text}/> Mi Perfil Docente</h3>
+                    <h3 className="text-xs font-black uppercase text-slate-400 mb-8 tracking-widest flex items-center gap-2"><UserCircle size={18} className={themeClasses.text}/> Perfil</h3>
                     <form onSubmit={handleUpdateProfile} className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input type="text" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" placeholder="Nombre" />
-                        <input type="text" value={profileForm.lastName} onChange={e => setProfileForm({...profileForm, lastName: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" placeholder="Apellidos" />
-                      </div>
-                      <textarea value={profileForm.bio} onChange={e => setProfileForm({...profileForm, bio: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold h-32" placeholder="Biografía pedagógica..." />
-                      <button type="submit" className={`${themeClasses.bg} w-full py-5 rounded-3xl text-white font-black uppercase text-xs tracking-widest shadow-xl`}><Save size={18} className="inline mr-2"/> Guardar Perfil</button>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="text" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" /><input type="text" value={profileForm.lastName} onChange={e => setProfileForm({...profileForm, lastName: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" /></div>
+                      <textarea value={profileForm.bio} onChange={e => setProfileForm({...profileForm, bio: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold h-32" />
+                      <button type="submit" className={`${themeClasses.bg} w-full py-5 rounded-3xl text-white font-black uppercase text-xs tracking-widest shadow-xl`}><Save size={18} className="inline mr-2"/> Guardar</button>
                     </form>
                   </div>
                   <div className="bg-white p-12 rounded-[48px] border border-slate-100 shadow-sm space-y-8">
-                    <h3 className="text-xs font-black uppercase text-slate-400 mb-4 tracking-widest flex items-center gap-2"><Share2 size={18} className={themeClasses.text}/> Presencia Digital</h3>
+                    <h3 className="text-xs font-black uppercase text-slate-400 mb-4 tracking-widest"><Share2 size={18} className={themeClasses.text}/> Redes</h3>
                     <div className="space-y-5">
-                      <div className="relative"><Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.instagram} onChange={e => setProfileForm({...profileForm, instagram: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm" placeholder="Usuario Instagram" /></div>
-                      <div className="relative"><Linkedin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.linkedin} onChange={e => setProfileForm({...profileForm, linkedin: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm" placeholder="Usuario LinkedIn" /></div>
-                      <div className="relative"><Music className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.tiktok} onChange={e => setProfileForm({...profileForm, tiktok: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm" placeholder="Usuario TikTok" /></div>
-                      <div className="relative"><Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.website} onChange={e => setProfileForm({...profileForm, website: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm" placeholder="URL Web Personal" /></div>
+                      <div className="relative"><Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.instagram} onChange={e => setProfileForm({...profileForm, instagram: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm" placeholder="Instagram" /></div>
+                      <div className="relative"><Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.website} onChange={e => setProfileForm({...profileForm, website: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm" placeholder="Web" /></div>
                     </div>
                   </div>
                 </div>
@@ -569,136 +617,29 @@ const App: React.FC = () => {
         )}
 
         {view === AppView.Upload && currentUser && (
-          <div className="max-w-4xl mx-auto">
-             <div className="bg-white rounded-[40px] shadow-sm border border-slate-200 p-8 md:p-12">
-                <header className="mb-10 text-center">
-                  <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">{editingResourceId ? 'Editar' : 'Compartir'} <span className={themeClasses.text}>Material</span></h2>
-                  <p className="text-xs font-bold text-slate-400 uppercase mt-2">Nivel actual: {activeCategory}</p>
-                </header>
-                <form onSubmit={handleUpload} className="space-y-10">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-4">Título del Recurso</label>
-                        <input required type="text" placeholder="Ej: Adaptación Curricular Matemáticas..." className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-4">Resumen Pedagógico</label>
-                        <RichTextEditor value={formData.summary} onChange={(val) => setFormData({...formData, summary: val})} themeClasses={themeClasses} />
-                      </div>
-                    </div>
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-4">Nivel y Asignatura</label>
-                        <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold mb-4" value={formData.level} onChange={e => setFormData({...formData, level: e.target.value as EducationalLevel, courses: []})}>
-                          {Object.keys(SUBJECTS_BY_LEVEL).map(l => <option key={l} value={l}>{l}</option>)}
-                        </select>
-                        <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})}>
-                          {SUBJECTS_BY_LEVEL[formData.level]?.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-4">Cursos Destinatarios</label>
-                        <div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-2xl">
-                          {COURSES_BY_LEVEL[formData.level]?.map(course => (
-                            <button key={course} type="button" onClick={() => handleCourseToggle(course)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${formData.courses.includes(course) ? `${themeClasses.bg} border-transparent text-white shadow-md scale-105` : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}>{course}</button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-slate-900 rounded-[32px] p-8 text-white space-y-8">
-                    <div className="flex gap-4">
-                      <button type="button" onClick={() => setFormData({...formData, uploadMethod: 'file'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'file' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>Enlace PDF/Drive</button>
-                      <button type="button" onClick={() => setFormData({...formData, uploadMethod: 'code'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'code' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>Incrustar HTML</button>
-                    </div>
-                    {formData.uploadMethod === 'file' ? (
-                      <div className="relative">
-                        <LinkIcon className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
-                        <input type="url" placeholder="https://drive.google.com/..." className="w-full pl-14 pr-6 py-6 rounded-2xl bg-slate-800 border-2 border-slate-700 font-bold text-white focus:border-indigo-500 transition-colors" value={formData.externalUrl} onChange={e => setFormData({...formData, externalUrl: e.target.value})} />
-                      </div>
-                    ) : (
-                      <textarea placeholder="Pega tu código HTML aquí..." className="w-full p-6 rounded-2xl bg-slate-800 border-none font-mono text-sm text-indigo-300 h-48" value={formData.pastedCode} onChange={e => setFormData({...formData, pastedCode: e.target.value})} />
-                    )}
-                  </div>
-                  <button type="submit" disabled={isUploading} className={`${themeClasses.bg} w-full py-6 rounded-[28px] text-white font-black uppercase text-sm shadow-2xl tracking-widest hover:scale-[1.02] transition-transform`}>
-                    {isUploading ? <Loader2 className="animate-spin inline mr-2" /> : <CheckCircle2 className="inline mr-2" />} 
-                    {editingResourceId ? 'Guardar Cambios' : 'Compartir ahora'}
-                  </button>
-                </form>
-             </div>
-          </div>
+          <div className="max-w-4xl mx-auto"><div className="bg-white rounded-[40px] shadow-sm border border-slate-200 p-8 md:p-12"><h2 className="text-3xl font-black text-slate-900 uppercase text-center mb-10">{editingResourceId ? 'Editar' : 'Compartir'} <span className={themeClasses.text}>Material</span></h2><form onSubmit={handleUpload} className="space-y-10"><div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-6"><input required type="text" placeholder="Título..." className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} /><RichTextEditor value={formData.summary} onChange={(val) => setFormData({...formData, summary: val})} themeClasses={themeClasses} /></div><div className="space-y-6"><select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold mb-4" value={formData.level} onChange={e => setFormData({...formData, level: e.target.value as EducationalLevel, courses: []})}>{Object.keys(SUBJECTS_BY_LEVEL).map(l => <option key={l} value={l}>{l}</option>)}</select><select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})}>{SUBJECTS_BY_LEVEL[formData.level]?.map(s => <option key={s} value={s}>{s}</option>)}</select><div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-2xl">{COURSES_BY_LEVEL[formData.level]?.map(course => (<button key={course} type="button" onClick={() => handleCourseToggle(course)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${formData.courses.includes(course) ? `${themeClasses.bg} border-transparent text-white shadow-md` : 'bg-white border-slate-100 text-slate-400'}`}>{course}</button>))}</div></div></div><div className="bg-slate-900 rounded-[32px] p-8 space-y-8"><div className="flex gap-4"><button type="button" onClick={() => setFormData({...formData, uploadMethod: 'file'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'file' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400'}`}>Enlace</button><button type="button" onClick={() => setFormData({...formData, uploadMethod: 'code'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'code' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400'}`}>HTML</button></div>{formData.uploadMethod === 'file' ? (<input type="url" placeholder="URL..." className="w-full p-6 rounded-2xl bg-slate-800 border-none text-white" value={formData.externalUrl} onChange={e => setFormData({...formData, externalUrl: e.target.value})} />) : (<textarea placeholder="Código..." className="w-full p-6 rounded-2xl bg-slate-800 border-none font-mono text-sm text-indigo-300 h-48" value={formData.pastedCode} onChange={e => setFormData({...formData, pastedCode: e.target.value})} />)}</div><button type="submit" disabled={isUploading} className={`${themeClasses.bg} w-full py-6 rounded-[28px] text-white font-black uppercase text-sm shadow-2xl`}>{isUploading ? <Loader2 className="animate-spin inline mr-2" /> : <CheckCircle2 className="inline mr-2" />} Guardar</button></form></div></div>
         )}
 
         {view === AppView.Detail && selectedResource && (
           <div className="animate-in fade-in duration-300 space-y-8">
-            <div className="flex items-center justify-between gap-4">
-              <button onClick={() => navigateTo(AppView.Explore)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900 transition-colors"><ArrowLeft size={18}/> Volver</button>
+            <div className="flex items-center justify-between gap-4"><button onClick={() => navigateTo(AppView.Explore)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900"><ArrowLeft size={18}/> Volver</button>
               <div className="flex items-center gap-3">
-                {currentUser?.email === selectedResource.email && (
-                  <>
-                    <button onClick={() => handleEditResource(selectedResource)} className="px-6 py-3 bg-white text-indigo-600 border border-indigo-200 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2 hover:bg-indigo-50 transition-colors"><Edit3 size={14} /> Editar</button>
-                    <button onClick={() => handleDeleteResource(selectedResource.id)} className="px-6 py-3 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2 hover:bg-red-100 transition-colors"><Trash2 size={14} /> Eliminar</button>
-                  </>
-                )}
-                <button onClick={() => { const url = `${window.location.origin}/?view=detail&id=${selectedResource.id}`; copyToClipboard(url); }} className="px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-2xl font-black text-[10px] uppercase shadow-sm">Compartir</button>
+                {currentUser?.email === selectedResource.email && (<><button onClick={() => handleEditResource(selectedResource)} className="px-6 py-3 bg-white text-indigo-600 border border-indigo-200 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2"><Edit3 size={14} /> Editar</button><button onClick={() => handleDeleteResource(selectedResource.id)} className="px-6 py-3 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2"><Trash2 size={14} /> Eliminar</button></>)}
+                <button onClick={() => { const url = `${window.location.origin}/?view=detail&id=${selectedResource.id}&category=${activeCategory}`; copyToClipboard(url); }} className="px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-2xl font-black text-[10px] uppercase shadow-sm">Compartir</button>
               </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
               <div className="lg:col-span-2 space-y-8">
-                <div ref={resourceContainerRef} className="aspect-video bg-slate-900 rounded-[40px] shadow-2xl overflow-hidden relative">
-                  <iframe src={selectedResource.pastedCode ? '' : selectedResource.contentUrl} srcDoc={selectedResource.pastedCode} className="w-full h-full border-none bg-white" title={selectedResource.title} />
-                  <button onClick={handleMaximize} className="absolute bottom-8 right-8 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:scale-105 transition-all"><Maximize2 size={24} /></button>
-                </div>
-                <div className="bg-white p-10 md:p-14 rounded-[48px] shadow-sm border border-slate-100">
-                  <h1 className="text-4xl font-black text-slate-900 mb-8 leading-tight">{selectedResource.title}</h1>
-                  <div className="text-slate-600 leading-relaxed text-lg prose prose-indigo max-w-none mb-12" dangerouslySetInnerHTML={{ __html: selectedResource.summary }} />
-                  <div className="flex flex-wrap gap-3">
-                    <span className={`px-5 py-2.5 ${themeClasses.softBg} ${themeClasses.softText} rounded-full text-[10px] font-black uppercase tracking-widest`}>{selectedResource.subject}</span>
-                    <span className="px-5 py-2.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">{selectedResource.level}</span>
-                    {selectedResource.courses.map(c => <span key={c} className="px-5 py-2.5 bg-white border border-slate-200 text-slate-400 rounded-full text-[10px] font-black uppercase tracking-widest">{c}</span>)}
-                  </div>
-                </div>
+                <div ref={resourceContainerRef} className="aspect-video bg-slate-900 rounded-[40px] shadow-2xl overflow-hidden relative"><iframe src={selectedResource.pastedCode ? '' : selectedResource.contentUrl} srcDoc={selectedResource.pastedCode} className="w-full h-full border-none bg-white" title={selectedResource.title} /><button onClick={handleMaximize} className="absolute bottom-8 right-8 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:scale-105"><Maximize2 size={24} /></button></div>
+                <div className="bg-white p-10 md:p-14 rounded-[48px] shadow-sm border border-slate-100"><h1 className="text-4xl font-black text-slate-900 mb-8 leading-tight">{selectedResource.title}</h1><div className="text-slate-600 leading-relaxed text-lg prose prose-indigo max-w-none mb-12" dangerouslySetInnerHTML={{ __html: selectedResource.summary }} /><div className="flex flex-wrap gap-3"><span className={`px-5 py-2.5 ${themeClasses.softBg} ${themeClasses.softText} rounded-full text-[10px] font-black uppercase tracking-widest`}>{selectedResource.subject}</span><span className="px-5 py-2.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">{selectedResource.level}</span></div></div>
               </div>
-              <div className="space-y-8">
-                <div className="bg-white p-10 rounded-[48px] shadow-sm border border-slate-100 text-center space-y-8">
-                  <div className="cursor-pointer group" onClick={() => { setViewingUserEmail(selectedResource.email); navigateTo(AppView.Profile); }}>
-                    <img src={users.find(u => u.email === selectedResource.email)?.avatar || `https://ui-avatars.com/api/?name=${selectedResource.authorName}`} className="w-28 h-28 rounded-[36px] mx-auto shadow-xl object-cover" />
-                    <h3 className="font-black text-slate-900 text-xl mt-6">{selectedResource.authorName}</h3>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Autoría verificada</p>
-                  </div>
-                  <div className="flex flex-col gap-4 border-t border-slate-50 pt-8">
-                    <div className="flex justify-center gap-3">
-                      {[1, 2, 3, 4, 5].map(v => (
-                        <button key={v} onClick={async () => {
-                          const resToRate = resources.find(r => r.id === selectedResource.id);
-                          if (!resToRate) return;
-                          const currentCount = resToRate.ratingCount || 1;
-                          const currentRating = resToRate.rating || 0;
-                          const updatedRating = ((currentRating * currentCount) + v) / (currentCount + 1);
-                          const updatedResource: Resource = { ...resToRate, rating: Number(updatedRating.toFixed(1)), ratingCount: currentCount + 1 };
-                          setResources(prev => prev.map(r => r.id === selectedResource.id ? updatedResource : r));
-                          setSelectedResource(updatedResource);
-                          await dbService.saveResource(updatedResource);
-                        }} className="text-slate-100 hover:text-amber-500 transition-colors">
-                          <Star size={28} fill={v <= Math.round(selectedResource.rating) ? 'currentColor' : 'none'} className={v <= Math.round(selectedResource.rating) ? 'text-amber-500' : 'text-slate-200'} />
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Valora este material</p>
-                  </div>
-                  <a href={selectedResource.contentUrl} target="_blank" rel="noopener noreferrer" className="block w-full py-5 bg-slate-900 text-white rounded-[24px] font-black uppercase text-[10px] tracking-widest shadow-xl">Ver Original Externo</a>
-                </div>
-              </div>
+              <div className="space-y-8"><div className="bg-white p-10 rounded-[48px] shadow-sm border border-slate-100 text-center space-y-8"><div className="cursor-pointer group" onClick={() => { setViewingUserEmail(selectedResource.email); navigateTo(AppView.Profile, { user: selectedResource.email }); }}><img src={users.find(u => u.email === selectedResource.email)?.avatar || `https://ui-avatars.com/api/?name=${selectedResource.authorName}`} className="w-28 h-28 rounded-[36px] mx-auto shadow-xl object-cover" /><h3 className="font-black text-slate-900 text-xl mt-6">{selectedResource.authorName}</h3><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Autoría verificada</p></div><div className="flex flex-col gap-4 border-t border-slate-50 pt-8"><div className="flex justify-center gap-3">{[1, 2, 3, 4, 5].map(v => (<button key={v} onClick={async () => { const resToRate = resources.find(r => r.id === selectedResource.id); if (!resToRate) return; const currentCount = resToRate.ratingCount || 1; const currentRating = resToRate.rating || 0; const updatedRating = ((currentRating * currentCount) + v) / (currentCount + 1); const updatedResource: Resource = { ...resToRate, rating: Number(updatedRating.toFixed(1)), ratingCount: currentCount + 1 }; setResources(prev => prev.map(r => r.id === selectedResource.id ? updatedResource : r)); setSelectedResource(updatedResource); await dbService.saveResource(updatedResource); }} className="text-slate-100 hover:text-amber-500"><Star size={28} fill={v <= Math.round(selectedResource.rating) ? 'currentColor' : 'none'} className={v <= Math.round(selectedResource.rating) ? 'text-amber-500' : 'text-slate-200'} /></button>))}</div><p className="text-[10px] font-bold text-slate-400 uppercase">Valora</p></div><a href={selectedResource.contentUrl} target="_blank" rel="noopener noreferrer" className="block w-full py-5 bg-slate-900 text-white rounded-[24px] font-black uppercase text-[10px] tracking-widest shadow-xl">Original Externo</a></div></div>
             </div>
           </div>
         )}
       </main>
 
-      <footer className="bg-white border-t border-slate-200 py-16 mt-24 text-center">
-        <div className="flex items-center justify-center gap-2 mb-2"><GraduationCap size={32} className={themeClasses.text} /><span className="text-2xl font-black uppercase tracking-tighter">NOGALES<span className={themeClasses.text}>PT</span></span></div>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.4em]">© 2025 • Repositorio Docente Colaborativo de Andalucía</p>
-      </footer>
+      <footer className="bg-white border-t border-slate-200 py-16 mt-24 text-center"><div className="flex items-center justify-center gap-2 mb-2"><GraduationCap size={32} className={themeClasses.text} /><span className="text-2xl font-black uppercase tracking-tighter">NOGALES<span className={themeClasses.text}>PT</span></span></div><p className="text-xs font-bold text-slate-400 uppercase tracking-[0.4em]">© 2025 • Repositorio Docente Colaborativo</p></footer>
     </div>
   );
 };
