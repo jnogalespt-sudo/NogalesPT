@@ -1,6 +1,6 @@
 
 export type EducationalLevel = 'Infantil' | 'Primaria' | 'Secundaria' | 'Bachillerato';
-export type MainCategory = 'General' | 'PT-AL';
+export type MainCategory = 'General' | 'PT-AL' | 'Programas' | 'Formacion';
 
 export interface User {
   email: string;
