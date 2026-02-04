@@ -9,7 +9,9 @@ import {
   Loader2, AlertCircle, Monitor, CheckCircle2, Instagram, Linkedin, 
   Share2, Camera, LogOut, Mail, Link as LinkIcon, RefreshCw, Image as ImageIcon, Music, Lock, EyeOff, Minimize,
   Twitter, AtSign, Send, MessageCircle, Trash2, Edit3, ShieldAlert, KeyRound, Zap,
-  Layers3, Maximize2, Inbox, Copy, Check, LogIn, Type, List, ListOrdered, Bold, Italic, Heading1, Heading2
+  Layers3, Maximize2, Inbox, Copy, Check, LogIn, Type, List, ListOrdered, Bold, Italic, Heading1, Heading2,
+  Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify, Quote, Table as TableIcon, 
+  Eraser, Hash, Type as TypeIcon, Palette, Indent, Outdent, Minus, Smile
 } from 'lucide-react';
 import { AppView, Resource, User as UserType, EducationalLevel, MainCategory, PrivateMessage } from './types';
 import { SUBJECTS_BY_LEVEL, COURSES_BY_LEVEL } from './constants';
@@ -29,7 +31,6 @@ const stripHtml = (html: string) => {
 const renderContentWithVideos = (content: string) => {
   if (!content) return "";
   
-  // Regex para detectar diversos formatos de enlaces de YouTube
   const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})(?:[^\s<]*)/g;
   
   return content.replace(youtubeRegex, (match, videoId) => {
@@ -50,8 +51,13 @@ const renderContentWithVideos = (content: string) => {
 };
 
 // --- COMPONENTES AUXILIARES ---
-const RichTextEditor = ({ value, onChange, themeClasses }: { value: string, onChange: (val: string) => void, themeClasses: any }) => {
+
+/**
+ * RichTextEditor Profesional "Nogales Style"
+ */
+const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: string) => void }) => {
   const editorRef = useRef<HTMLDivElement>(null);
+  const colorInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== value) {
@@ -59,37 +65,139 @@ const RichTextEditor = ({ value, onChange, themeClasses }: { value: string, onCh
     }
   }, []);
 
-  const execCommand = (command: string, arg?: string) => {
+  const exec = (command: string, arg?: string) => {
     document.execCommand(command, false, arg);
     if (editorRef.current) onChange(editorRef.current.innerHTML);
   };
 
-  const handleLink = () => {
-    const url = prompt("Introduce la URL del enlace:");
-    if (url) execCommand("createLink", url);
+  const handleTable = () => {
+    const table = `<table style="width:100%; border: 1px solid #cbd5e1; border-collapse: collapse; margin: 10px 0;">
+      <tr><td style="border: 1px solid #cbd5e1; padding: 8px;">Celda 1</td><td style="border: 1px solid #cbd5e1; padding: 8px;">Celda 2</td></tr>
+      <tr><td style="border: 1px solid #cbd5e1; padding: 8px;">Celda 3</td><td style="border: 1px solid #cbd5e1; padding: 8px;">Celda 4</td></tr>
+    </table><p><br></p>`;
+    exec("insertHTML", table);
   };
 
+  const ToolbarButton = ({ onClick, icon: Icon, title, active = false }: any) => (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={`p-1.5 rounded transition-all hover:bg-slate-200 border border-transparent hover:border-slate-300 ${
+        active ? 'bg-slate-200 shadow-inner' : 'text-slate-700'
+      }`}
+    >
+      <Icon size={15} strokeWidth={2.5} />
+    </button>
+  );
+
   return (
-    <div className="w-full border-2 border-slate-100 rounded-[24px] overflow-hidden bg-white focus-within:border-indigo-500/30 transition-all shadow-inner">
-      <div className="bg-slate-50 border-b border-slate-100 p-2 flex flex-wrap gap-1">
-        <button type="button" onClick={() => execCommand('bold')} className="p-2 hover:bg-white rounded-lg text-slate-600 transition-colors"><Bold size={16} /></button>
-        <button type="button" onClick={() => execCommand('italic')} className="p-2 hover:bg-white rounded-lg text-slate-600 transition-colors"><Italic size={16} /></button>
-        <div className="w-px h-6 bg-slate-200 mx-1 self-center" />
-        <button type="button" onClick={() => execCommand('formatBlock', 'h1')} className="p-2 hover:bg-white rounded-lg text-slate-600 font-black text-xs">H1</button>
-        <button type="button" onClick={() => execCommand('formatBlock', 'h2')} className="p-2 hover:bg-white rounded-lg text-slate-600 font-black text-xs">H2</button>
-        <div className="w-px h-6 bg-slate-200 mx-1 self-center" />
-        <button type="button" onClick={() => execCommand('insertUnorderedList')} className="p-2 hover:bg-white rounded-lg text-slate-600"><List size={16} /></button>
-        <button type="button" onClick={() => execCommand('insertOrderedList')} className="p-2 hover:bg-white rounded-lg text-slate-600"><ListOrdered size={16} /></button>
-        <div className="w-px h-6 bg-slate-200 mx-1 self-center" />
-        <button type="button" onClick={handleLink} className="p-2 hover:bg-white rounded-lg text-slate-600"><LinkIcon size={16} /></button>
-        <button type="button" onClick={() => execCommand('removeFormat')} className="p-2 hover:bg-white rounded-lg text-red-400"><X size={16} /></button>
+    <div className="w-full flex flex-col border border-slate-300 rounded-[12px] bg-[#fdfdfd] shadow-sm overflow-hidden focus-within:ring-1 focus-within:ring-indigo-200 transition-all">
+      {/* TOOLBAR PROFESIONAL - NIVEL 1 */}
+      <div className="bg-[#f0f2f5] border-b border-slate-300 p-1.5 flex flex-wrap items-center gap-1">
+        <div className="flex gap-0.5 pr-1 border-r border-slate-400">
+          <ToolbarButton onClick={() => exec('bold')} icon={Bold} title="Negrita" />
+          <ToolbarButton onClick={() => exec('italic')} icon={Italic} title="Cursiva" />
+          <ToolbarButton onClick={() => exec('underline')} icon={Underline} title="Subrayado" />
+          <ToolbarButton onClick={() => exec('strikeThrough')} icon={Strikethrough} title="Tachado" />
+          <ToolbarButton onClick={() => exec('removeFormat')} icon={Eraser} title="Limpiar formato (Tx)" />
+        </div>
+        
+        <div className="flex gap-0.5 pr-1 border-r border-slate-400">
+          <ToolbarButton onClick={() => exec('insertUnorderedList')} icon={List} title="Viñetas" />
+          <ToolbarButton onClick={() => exec('insertOrderedList')} icon={ListOrdered} title="Lista numerada" />
+          <ToolbarButton onClick={() => exec('outdent')} icon={Outdent} title="Reducir sangría" />
+          <ToolbarButton onClick={() => exec('indent')} icon={Indent} title="Aumentar sangría" />
+          <ToolbarButton onClick={() => exec('formatBlock', 'blockquote')} icon={Quote} title="Cita" />
+        </div>
+
+        <div className="flex gap-0.5 pr-1 border-r border-slate-400">
+          <ToolbarButton onClick={() => exec('justifyLeft')} icon={AlignLeft} title="Izquierda" />
+          <ToolbarButton onClick={() => exec('justifyCenter')} icon={AlignCenter} title="Centro" />
+          <ToolbarButton onClick={() => exec('justifyRight')} icon={AlignRight} title="Derecha" />
+          <ToolbarButton onClick={() => exec('justifyFull')} icon={AlignJustify} title="Justificado" />
+        </div>
+
+        <div className="flex gap-0.5">
+          <ToolbarButton onClick={() => {const url = prompt('URL:'); if(url) exec('createLink', url)}} icon={LinkIcon} title="Enlace" />
+          <ToolbarButton onClick={() => {const url = prompt('Imagen URL:'); if(url) exec('insertImage', url)}} icon={ImageIcon} title="Imagen" />
+          <ToolbarButton onClick={handleTable} icon={TableIcon} title="Tabla" />
+          <ToolbarButton onClick={() => exec('insertHorizontalRule')} icon={Minus} title="Línea horizontal" />
+          <button 
+            onClick={() => colorInputRef.current?.click()}
+            className="p-1.5 rounded transition-all hover:bg-slate-200 border border-transparent text-indigo-600 flex flex-col items-center gap-0"
+            title="Color de fuente"
+          >
+            <Palette size={15} strokeWidth={2.5} />
+            <div className="w-full h-0.5 bg-indigo-600 mt-0.5 rounded-full" />
+            <input 
+              ref={colorInputRef}
+              type="color" 
+              className="hidden" 
+              onChange={(e) => exec('foreColor', e.target.value)} 
+            />
+          </button>
+        </div>
       </div>
+
+      {/* TOOLBAR - NIVEL 2 (SELECTORES) */}
+      <div className="bg-[#f0f2f5] border-b border-slate-300 p-1.5 flex flex-wrap items-center gap-3">
+        {/* Formato de bloque */}
+        <select 
+          className="bg-white border border-slate-300 rounded text-[11px] px-2 py-1 outline-none font-medium h-7"
+          onChange={(e) => exec('formatBlock', e.target.value)}
+          defaultValue="p"
+        >
+          <option value="p">Formato (Párrafo)</option>
+          <option value="h1">Título 1</option>
+          <option value="h2">Título 2</option>
+          <option value="h3">Título 3</option>
+          <option value="pre">Código fuente</option>
+        </select>
+
+        {/* Fuente */}
+        <select 
+          className="bg-white border border-slate-300 rounded text-[11px] px-2 py-1 outline-none font-medium h-7"
+          onChange={(e) => exec('fontName', e.target.value)}
+          defaultValue="Quicksand"
+        >
+          <option value="Arial">Fuente (Arial)</option>
+          <option value="Comic Sans MS">Comic Sans</option>
+          <option value="Courier New">Courier New</option>
+          <option value="Georgia">Georgia</option>
+          <option value="Tahoma">Tahoma</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Verdana">Verdana</option>
+        </select>
+
+        {/* Tamaño */}
+        <select 
+          className="bg-white border border-slate-300 rounded text-[11px] px-2 py-1 outline-none font-medium h-7"
+          onChange={(e) => exec('fontSize', e.target.value)}
+          defaultValue="3"
+        >
+          <option value="1">Tamaño (1 - Muy pequeño)</option>
+          <option value="2">2 - Pequeño</option>
+          <option value="3">3 - Normal</option>
+          <option value="4">4 - Mediano</option>
+          <option value="5">5 - Grande</option>
+          <option value="6">6 - Muy Grande</option>
+          <option value="7">7 - Gigante</option>
+        </select>
+      </div>
+
+      {/* AREA DE ESCRITURA */}
       <div 
         ref={editorRef}
         contentEditable 
         onInput={(e) => onChange(e.currentTarget.innerHTML)}
-        className="p-4 min-h-[180px] outline-none prose prose-sm max-w-none text-slate-700 font-medium bg-white"
+        className="p-8 min-h-[300px] outline-none prose prose-slate max-w-none text-slate-800 font-medium bg-white selection:bg-indigo-100"
       />
+      
+      {/* ESTATUS BAR */}
+      <div className="bg-slate-50 border-t border-slate-200 px-4 py-1 flex justify-end">
+        <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Editor Nogales PRO v2.0</span>
+      </div>
     </div>
   );
 };
@@ -168,18 +276,14 @@ const App: React.FC = () => {
     setIsMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Actualizar la URL del navegador de forma segura con try-catch
     try {
       const searchParams = new URLSearchParams();
       searchParams.set('view', newView);
       if (params.id) searchParams.set('id', params.id);
       if (params.user) searchParams.set('user', params.user);
       searchParams.set('category', activeCategory);
-      // Usamos el search string directamente
       window.history.pushState({}, '', `?${searchParams.toString()}`);
     } catch (e) {
-      // Si pushState falla (ej. por restricciones de origen en entornos sandbox),
-      // registramos el aviso pero permitimos que la navegación interna continúe
       console.warn("Navegación URL limitada por restricciones de seguridad del entorno.");
     }
 
@@ -202,7 +306,6 @@ const App: React.FC = () => {
     return resources.filter(r => r.email === viewingUserEmail);
   }, [resources, viewingUserEmail]);
 
-  // --- LÓGICA DE SEO DINÁMICO ---
   useEffect(() => {
     let title = "Repositorio Colaborativo para Docentes | NOGALESPT";
     let description = "Materiales de calidad, interactivos y adaptados para maestros de PT y AL en Andalucía. El mayor repositorio colaborativo para docentes.";
@@ -251,7 +354,6 @@ const App: React.FC = () => {
         setResources(resData || []);
         setUsers(usersData || []);
         
-        // Restaurar sesión
         const stored = localStorage.getItem('nogalespt_current_user');
         if (stored) {
           const parsedUser = JSON.parse(stored);
@@ -261,7 +363,6 @@ const App: React.FC = () => {
           }
         }
 
-        // Restaurar estado desde URL
         const params = new URLSearchParams(window.location.search);
         const viewParam = params.get('view') as AppView;
         const idParam = params.get('id');
@@ -587,7 +688,7 @@ const App: React.FC = () => {
                 <p className="text-slate-400 font-bold uppercase tracking-widest text-sm flex items-center justify-center md:justify-start gap-2"><Mail size={16} className={themeClasses.text}/> {activeProfile.email}</p>
                 {activeProfile.bio && <p className="text-lg text-slate-600 leading-relaxed font-medium">{activeProfile.bio}</p>}
                 <div className="flex flex-wrap gap-4 justify-center md:justify-start pt-4">
-                  <SocialLink platform="instagram" handle={activeProfile.instagram} /><SocialLink platform="linkedin" handle={activeProfile.linkedin} /><SocialLink platform="tiktok" handle={activeProfile.tiktok} /><SocialLink platform="website" handle={activeProfile.website} />
+                  <SocialLink platform="instagram" handle={activeProfile.instagram} /><SocialLink platform="linkedin" handle={activeProfile.linkedin} /><SocialLink platform="tiktok" handle={activeProfile.tiktok} /><SocialLink platform="twitter" handle={activeProfile.twitter} /><SocialLink platform="website" handle={activeProfile.website} />
                 </div>
               </div>
             </div>
@@ -652,7 +753,7 @@ const App: React.FC = () => {
         )}
 
         {view === AppView.Upload && currentUser && (
-          <div className="max-w-4xl mx-auto"><div className="bg-white rounded-[40px] shadow-sm border border-slate-200 p-8 md:p-12"><h2 className="text-3xl font-black text-slate-900 uppercase text-center mb-10">{editingResourceId ? 'Editar' : 'Compartir'} <span className={themeClasses.text}>Material</span></h2><form onSubmit={handleUpload} className="space-y-10"><div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-6"><input required type="text" placeholder="Título..." className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} /><RichTextEditor value={formData.summary} onChange={(val) => setFormData({...formData, summary: val})} themeClasses={themeClasses} /></div><div className="space-y-6"><select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold mb-4" value={formData.level} onChange={e => setFormData({...formData, level: e.target.value as EducationalLevel, courses: []})}>{Object.keys(SUBJECTS_BY_LEVEL).map(l => <option key={l} value={l}>{l}</option>)}</select><select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})}>{SUBJECTS_BY_LEVEL[formData.level]?.map(s => <option key={s} value={s}>{s}</option>)}</select><div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-2xl">{COURSES_BY_LEVEL[formData.level]?.map(course => (<button key={course} type="button" onClick={() => handleCourseToggle(course)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${formData.courses.includes(course) ? `${themeClasses.bg} border-transparent text-white shadow-md` : 'bg-white border-slate-100 text-slate-400'}`}>{course}</button>))}</div></div></div><div className="bg-slate-900 rounded-[32px] p-8 space-y-8"><div className="flex gap-4"><button type="button" onClick={() => setFormData({...formData, uploadMethod: 'file'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'file' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400'}`}>Enlace</button><button type="button" onClick={() => setFormData({...formData, uploadMethod: 'code'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'code' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400'}`}>HTML</button></div>{formData.uploadMethod === 'file' ? (<input type="url" placeholder="URL..." className="w-full p-6 rounded-2xl bg-slate-800 border-none text-white" value={formData.externalUrl} onChange={e => setFormData({...formData, externalUrl: e.target.value})} />) : (<textarea placeholder="Código..." className="w-full p-6 rounded-2xl bg-slate-800 border-none font-mono text-sm text-indigo-300 h-48" value={formData.pastedCode} onChange={e => setFormData({...formData, pastedCode: e.target.value})} />)}</div><button type="submit" disabled={isUploading} className={`${themeClasses.bg} w-full py-6 rounded-[28px] text-white font-black uppercase text-sm shadow-2xl`}>{isUploading ? <Loader2 className="animate-spin inline mr-2" /> : <CheckCircle2 className="inline mr-2" />} Guardar</button></form></div></div>
+          <div className="max-w-4xl mx-auto"><div className="bg-white rounded-[40px] shadow-sm border border-slate-200 p-8 md:p-12"><h2 className="text-3xl font-black text-slate-900 uppercase text-center mb-10">{editingResourceId ? 'Editar' : 'Compartir'} <span className={themeClasses.text}>Material</span></h2><form onSubmit={handleUpload} className="space-y-10"><div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-6"><input required type="text" placeholder="Título..." className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} /><RichTextEditor value={formData.summary} onChange={(val) => setFormData({...formData, summary: val})} /></div><div className="space-y-6"><select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold mb-4" value={formData.level} onChange={e => setFormData({...formData, level: e.target.value as EducationalLevel, courses: []})}>{Object.keys(SUBJECTS_BY_LEVEL).map(l => <option key={l} value={l}>{l}</option>)}</select><select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})}>{SUBJECTS_BY_LEVEL[formData.level]?.map(s => <option key={s} value={s}>{s}</option>)}</select><div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-2xl">{COURSES_BY_LEVEL[formData.level]?.map(course => (<button key={course} type="button" onClick={() => handleCourseToggle(course)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${formData.courses.includes(course) ? `${themeClasses.bg} border-transparent text-white shadow-md` : 'bg-white border-slate-100 text-slate-400'}`}>{course}</button>))}</div></div></div><div className="bg-slate-900 rounded-[32px] p-8 space-y-8"><div className="flex gap-4"><button type="button" onClick={() => setFormData({...formData, uploadMethod: 'file'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'file' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400'}`}>Enlace</button><button type="button" onClick={() => setFormData({...formData, uploadMethod: 'code'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'code' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400'}`}>HTML</button></div>{formData.uploadMethod === 'file' ? (<input type="url" placeholder="URL..." className="w-full p-6 rounded-2xl bg-slate-800 border-none text-white" value={formData.externalUrl} onChange={e => setFormData({...formData, externalUrl: e.target.value})} />) : (<textarea placeholder="Código..." className="w-full p-6 rounded-2xl bg-slate-800 border-none font-mono text-sm text-indigo-300 h-48" value={formData.pastedCode} onChange={e => setFormData({...formData, pastedCode: e.target.value})} />)}</div><button type="submit" disabled={isUploading} className={`${themeClasses.bg} w-full py-6 rounded-[28px] text-white font-black uppercase text-sm shadow-2xl`}>{isUploading ? <Loader2 className="animate-spin inline mr-2" /> : <CheckCircle2 className="inline mr-2" />} Guardar</button></form></div></div>
         )}
 
         {view === AppView.Detail && selectedResource && (
@@ -665,7 +766,6 @@ const App: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
               <div className="lg:col-span-2 space-y-8">
-                <div ref={resourceContainerRef} className="aspect-video bg-slate-900 rounded-[40px] shadow-2xl overflow-hidden relative"><iframe src={selectedResource.pastedCode ? '' : selectedResource.contentUrl} srcDoc={selectedResource.pastedCode} className="w-full h-full border-none bg-white" title={selectedResource.title} /><button onClick={handleMaximize} className="absolute bottom-8 right-8 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:scale-105"><Maximize2 size={24} /></button></div>
                 <div className="bg-white p-10 md:p-14 rounded-[48px] shadow-sm border border-slate-100">
                   <h1 className="text-4xl font-black text-slate-900 mb-8 leading-tight">{selectedResource.title}</h1>
                   <div className="text-slate-600 leading-relaxed text-lg prose prose-indigo max-w-none mb-12" dangerouslySetInnerHTML={{ __html: renderContentWithVideos(selectedResource.summary) }} />
@@ -674,6 +774,20 @@ const App: React.FC = () => {
                     <span className="px-5 py-2.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">{selectedResource.level}</span>
                   </div>
                 </div>
+
+                {(selectedResource.pastedCode || (selectedResource.contentUrl && selectedResource.contentUrl.trim() !== '')) && (
+                  <div ref={resourceContainerRef} className="aspect-video bg-slate-900 rounded-[40px] shadow-2xl overflow-hidden relative">
+                    <iframe 
+                      src={selectedResource.pastedCode ? '' : selectedResource.contentUrl} 
+                      srcDoc={selectedResource.pastedCode} 
+                      className="w-full h-full border-none bg-white" 
+                      title={selectedResource.title} 
+                    />
+                    <button onClick={handleMaximize} className="absolute bottom-8 right-8 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:scale-105">
+                      <Maximize2 size={24} />
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="space-y-8"><div className="bg-white p-10 rounded-[48px] shadow-sm border border-slate-100 text-center space-y-8"><div className="cursor-pointer group" onClick={() => { setViewingUserEmail(selectedResource.email); navigateTo(AppView.Profile, { user: selectedResource.email }); }}><img src={users.find(u => u.email === selectedResource.email)?.avatar || `https://ui-avatars.com/api/?name=${selectedResource.authorName}`} className="w-28 h-28 rounded-[36px] mx-auto shadow-xl object-cover" /><h3 className="font-black text-slate-900 text-xl mt-6">{selectedResource.authorName}</h3><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Autoría verificada</p></div><div className="flex flex-col gap-4 border-t border-slate-50 pt-8"><div className="flex justify-center gap-3">{[1, 2, 3, 4, 5].map(v => (<button key={v} onClick={async () => { const resToRate = resources.find(r => r.id === selectedResource.id); if (!resToRate) return; const currentCount = resToRate.ratingCount || 1; const currentRating = resToRate.rating || 0; const updatedRating = ((currentRating * currentCount) + v) / (currentCount + 1); const updatedResource: Resource = { ...resToRate, rating: Number(updatedRating.toFixed(1)), ratingCount: currentCount + 1 }; setResources(prev => prev.map(r => r.id === selectedResource.id ? updatedResource : r)); setSelectedResource(updatedResource); await dbService.saveResource(updatedResource); }} className="text-slate-100 hover:text-amber-500"><Star size={28} fill={v <= Math.round(selectedResource.rating) ? 'currentColor' : 'none'} className={v <= Math.round(selectedResource.rating) ? 'text-amber-500' : 'text-slate-200'} /></button>))}</div><p className="text-[10px] font-bold text-slate-400 uppercase">Valora</p></div><a href={selectedResource.contentUrl} target="_blank" rel="noopener noreferrer" className="block w-full py-5 bg-slate-900 text-white rounded-[24px] font-black uppercase text-[10px] tracking-widest shadow-xl">Original Externo</a></div></div>
             </div>
