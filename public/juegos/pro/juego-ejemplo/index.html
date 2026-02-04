@@ -1,80 +1,38 @@
+
 <!DOCTYPE html>
-<html lang="es" class="h-full">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Trazado Mágico - Nogales PT</title>
-    <!-- Cargamos los estilos locales, sin llamadas externas a CDNs -->
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MODO PRO - Juego Educativo Independiente</title>
+    
+    <!-- CARGA LOCAL: Rutas relativas para evitar bloqueos de firewall -->
+    <link rel="stylesheet" href="./css/style.css">
 </head>
-<body class="h-full bg-slate-50 font-fredoka overflow-hidden select-none">
+<body>
+    <div id="game-container">
+        <header>
+            <div class="badge">MODO PRO - OFFLINE SAFE</div>
+            <h1>Desafío Educativo PRO</h1>
+            <p>Este juego se ejecuta 100% en local sin conexiones externas.</p>
+        </header>
 
-    <!-- Pantalla de Inicio -->
-    <div id="start-overlay" class="fixed inset-0 z-[1000] flex flex-col items-center justify-center text-center p-8 bg-gradient-to-br from-emerald-500 to-emerald-900 text-white">
-        <div class="logo-container bg-white p-5 rounded-[2.5rem] shadow-2xl mb-8 animate-pop">
-            <img src="https://i.imgur.com/bPgvR72.jpeg" alt="Logo" class="h-32 w-auto rounded-2xl">
-        </div>
-        <h1 class="text-4xl md:text-5xl font-black mb-2 uppercase tracking-tight">Trazado Mágico</h1>
-        <p class="text-emerald-100 text-lg mb-10 font-medium">Aprende con Nogales PT</p>
-        <button id="btn-start" class="pulse-btn px-16 py-5 bg-white text-emerald-600 rounded-full font-black text-2xl shadow-xl active:scale-95 transition-transform uppercase tracking-widest">
-            ¡Empezar!
-        </button>
+        <main>
+            <div id="canvas-wrapper">
+                <!-- Aquí iría la lógica del juego o canvas -->
+                <div class="placeholder-game">
+                    <div class="icon">🎮</div>
+                    <button id="start-btn">Comenzar Reto</button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>NogalesPT Educational Hub &copy; 2025</p>
+        </footer>
     </div>
 
-    <!-- Interfaz del Juego -->
-    <header class="p-4 bg-white/95 border-b border-slate-200 z-50 sticky top-0 shadow-sm">
-        <div class="max-w-5xl mx-auto flex flex-col gap-3">
-            <div class="flex justify-between items-center">
-                <img src="https://i.imgur.com/bPgvR72.jpeg" alt="Logo" class="h-10 rounded-lg border border-slate-100">
-                <div class="badge px-4 py-1.5 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase rounded-full border border-emerald-100">
-                    Nogales PT · A-Z
-                </div>
-            </div>
-            <div id="letter-selector" class="flex gap-2 overflow-x-auto no-scrollbar py-1"></div>
-        </div>
-    </header>
-
-    <main class="flex-1 flex flex-col items-center justify-center p-4">
-        <div id="game-wrapper" class="w-full max-w-[450px] aspect-square relative">
-            <div id="game-container" class="w-full h-full bg-white rounded-[3rem] shadow-2xl border-8 border-white relative overflow-hidden">
-                <!-- SVG de guía (fantasma) -->
-                <svg id="svg-ghost" class="absolute inset-0 w-full h-full opacity-[0.08] pointer-events-none" viewBox="0 0 100 100"></svg>
-                <!-- Canvas de dibujo -->
-                <canvas id="main-canvas" class="absolute inset-0 w-full h-full z-10"></canvas>
-                <!-- SVG de interfaz (puntos y flechas) -->
-                <svg id="svg-ui" class="absolute inset-0 w-full h-full z-20 pointer-events-none" viewBox="0 0 100 100"></svg>
-
-                <!-- Pantalla de Quiz -->
-                <div id="quiz-overlay" class="absolute inset-0 z-40 bg-white/95 hidden flex flex-col items-center justify-center p-8 text-center animate-pop">
-                    <h2 class="text-xl font-bold text-slate-800 mb-6">¿Qué empieza por <span id="quiz-char" class="text-emerald-600 text-4xl font-black">A</span>?</h2>
-                    <div id="quiz-options" class="grid grid-cols-1 gap-3 w-full max-w-[260px]"></div>
-                </div>
-
-                <!-- Pantalla de Victoria -->
-                <div id="win-overlay" class="absolute inset-0 z-50 bg-emerald-600 hidden flex flex-col items-center justify-center text-white p-8 text-center">
-                    <img src="https://media4.giphy.com/media/v1.Y2lkPTZjMDliOTUyamNjeWpzNWZnM2kydHlmY2NjdGZ5ZGd6enh2eTluZ3RrMTdzNGdzZSZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/lpyDnoRy0pNjyvLK04/giphy.gif" alt="Win" class="w-48 h-48 mb-4 rounded-3xl">
-                    <h2 class="text-3xl font-black uppercase tracking-wide">¡Genial!</h2>
-                </div>
-            </div>
-        </div>
-
-        <div class="h-16 flex items-center justify-center">
-            <p id="hint-msg" class="text-slate-400 font-bold italic text-center"></p>
-        </div>
-    </main>
-
-    <footer class="p-6 flex justify-center">
-        <button id="btn-clear" class="btn-3d px-10 py-4 bg-emerald-600 text-white rounded-2xl font-black shadow-lg flex items-center gap-3 text-lg uppercase tracking-wider active:translate-y-1 transition-all">
-            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-                <path d="M21 3v5h-5"></path>
-                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-                <path d="M8 16H3v5"></path>
-            </svg>
-            Reiniciar
-        </button>
-    </footer>
-
-    <script src="js/main.js"></script>
+    <!-- CARGA LOCAL: Script principal -->
+    <script src="./js/main.js"></script>
 </body>
 </html>
