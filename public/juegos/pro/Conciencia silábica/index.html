@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CONCIENCIA SILÁBICA - NOGALESPT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background-color: #f1f5f9;
+            overflow-y: auto;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .menu-card {
+            transition: all 0.2s ease;
+        }
+        .menu-card:active {
+            transform: scale(0.98);
+        }
+
+        .syllable-card {
+            touch-action: none;
+            cursor: grab;
+            z-index: 50;
+        }
+
+        .drop-zone-active {
+            border-color: #a855f7 !important;
+            background-color: #faf5ff !important;
+            transform: scale(1.05);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Estilo fiel al logo de la imagen */
+        .logo-box {
+            background-color: #6d9773;
+            border-radius: 1.25rem;
+        }
+        .logo-text-nogales { color: #1e293b; }
+        .logo-text-pt { color: #6d9773; }
+
+        .report-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .report-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="min-h-screen py-4 px-2 sm:py-8 sm:px-4">
+
+    <div id="main-app" class="max-w-md mx-auto bg-white rounded-[2.5rem] shadow-2xl border-[6px] border-purple-50 overflow-hidden relative min-h-[650px] flex flex-col">
+        
+        <!-- CABECERA FIEL AL LOGO -->
+        <div class="p-6 bg-white border-b border-gray-100 flex flex-col items-center">
+            <!-- Icono del Birrete -->
+            <div class="w-16 h-16 logo-box flex items-center justify-center mb-2 shadow-sm">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-10 h-10">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5-10 5-10 5z"/>
+                    <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                </svg>
+            </div>
+            <!-- Texto NOGALESPT -->
+            <div class="text-3xl font-black flex items-baseline tracking-tighter">
+                <span class="logo-text-nogales">NOGALES</span><span class="logo-text-pt">PT</span>
+            </div>
+            <h1 class="text-[10px] font-bold text-purple-400 tracking-[0.3em] uppercase mt-1">CONCIENCIA SILÁBICA</h1>
+        </div>
+
+        <!-- CONTENEDOR DINÁMICO -->
+        <div id="view-container" class="flex-1 flex flex-col p-5">
+            <!-- Cargado por JS -->
+        </div>
+
+    </div>
+
+    <script>
+        // BASE DE DATOS MANTENIDA (Mismo contenido previo de gameLibrary)
+        const gameLibrary = {
+            directas: {
+                inicio: [
+                    { word: "casa", emoji: "🏠", syllables: ["ca", "sa"], targetIdx: 0, options: ["ca", "ka"] },
+                    { word: "pato", emoji: "🦆", syllables: ["pa", "to"], targetIdx: 0, options: ["pa", "ba"] },
+                    { word: "mono", emoji: "🐒", syllables: ["mo", "no"], targetIdx: 0, options: ["mo", "no"] },
+                    { word: "luna", emoji: "🌙", syllables: ["lu", "na"], targetIdx: 0, options: ["lu", "lo"] },
+                    { word: "sapo", emoji: "🐸", syllables: ["sa", "po"], targetIdx: 0, options: ["sa", "za"] },
+                    { word: "dedo", emoji: "☝️", syllables: ["de", "do"], targetIdx: 0, options: ["de", "be"] },
+                    { word: "vaca", emoji: "🐮", syllables: ["va", "ca"], targetIdx: 0, options: ["va", "ba"] },
+                    { word: "gato", emoji: "🐱", syllables: ["ga", "to"], targetIdx: 0, options: ["ga", "ja"] },
+                    { word: "foca", emoji: "🦭", syllables: ["fo", "ca"], targetIdx: 0, options: ["fo", "po"] },
+                    { word: "nube", emoji: "☁️", syllables: ["nu", "be"], targetIdx: 0, options: ["nu", "mu"] },
+                    { word: "pino", emoji: "🌲", syllables: ["pi", "no"], targetIdx: 0, options: ["pi", "bi"] },
+                    { word: "rosa", emoji: "🌹", syllables: ["ro", "sa"], targetIdx: 0, options: ["ro", "lo"] },
+                    { word: "toro", emoji: "🐂", syllables: ["to", "ro"], targetIdx: 0, options: ["to", "do"] },
+                    { word: "rana", emoji: "🐸", syllables: ["ra", "na"], targetIdx: 0, options: ["ra", "la"] },
+                    { word: "pala", emoji: "🧹", syllables: ["pa", "la"], targetIdx: 0, options: ["pa", "ta"] },
+                    { word: "nido", emoji: "🪺", syllables: ["ni", "do"], targetIdx: 0, options: ["ni", "mi"] },
+                    { word: "bola", emoji: "⚽", syllables: ["bo", "la"], targetIdx: 0, options: ["bo", "po"] },
+                    { word: "jarrón", emoji: "🏺", syllables: ["ja", "rrón"], targetIdx: 0, options: ["ja", "ga"] },
+                    { word: "silla", emoji: "🪑", syllables: ["si", "lla"], targetIdx: 0, options: ["si", "zi"] },
+                    { word: "piña", emoji: "🍍", syllables: ["pi", "ña"], targetIdx: 0, options: ["pi", "bi"] }
+                ],
+                mitad: [
+                    { word: "pelota", emoji: "⚽", syllables: ["pe", "lo", "ta"], targetIdx: 1, options: ["lo", "ro"] },
+                    { word: "maleta", emoji: "💼", syllables: ["ma", "le", "ta"], targetIdx: 1, options: ["le", "de"] },
+                    { word: "comida", emoji: "🍽️", syllables: ["co", "mi", "da"], targetIdx: 1, options: ["mi", "ni"] },
+                    { word: "canica", emoji: "⚪", syllables: ["ca", "ni", "ca"], targetIdx: 1, options: ["ni", "mi"] },
+                    { word: "paloma", emoji: "🕊️", syllables: ["pa", "lo", "ma"], targetIdx: 1, options: ["lo", "ro"] },
+                    { word: "basura", emoji: "🗑️", syllables: ["ba", "su", "ra"], targetIdx: 1, options: ["su", "zu"] },
+                    { word: "cocina", emoji: "🍳", syllables: ["co", "ci", "na"], targetIdx: 1, options: ["ci", "si"] },
+                    { word: "madera", emoji: "🪵", syllables: ["ma", "de", "ra"], targetIdx: 1, options: ["de", "be"] },
+                    { word: "tomate", emoji: "🍅", syllables: ["to", "ma", "te"], targetIdx: 1, options: ["ma", "na"] },
+                    { word: "raqueta", emoji: "🎾", syllables: ["ra", "que", "ta"], targetIdx: 1, options: ["que", "ke"] },
+                    { word: "zapato", emoji: "👟", syllables: ["za", "pa", "to"], targetIdx: 1, options: ["pa", "ba"] },
+                    { word: "abanico", emoji: "🪭", syllables: ["a", "ba", "ni", "co"], targetIdx: 2, options: ["ni", "mi"] },
+                    { word: "corona", emoji: "👑", syllables: ["co", "ro", "na"], targetIdx: 1, options: ["ro", "lo"] },
+                    { word: "pecera", emoji: "🥣", syllables: ["pe", "ce", "ra"], targetIdx: 1, options: ["ce", "se"] },
+                    { word: "jirafa", emoji: "🦒", syllables: ["ji", "ra", "fa"], targetIdx: 1, options: ["ra", "la"] },
+                    { word: "pepino", emoji: "🥒", syllables: ["pe", "pi", "no"], targetIdx: 1, options: ["pi", "bi"] },
+                    { word: "conejo", emoji: "🐇", syllables: ["co", "ne", "jo"], targetIdx: 1, options: ["ne", "me"] },
+                    { word: "camino", emoji: "🛣️", syllables: ["ca", "mi", "no"], targetIdx: 1, options: ["mi", "ni"] },
+                    { word: "regalo", emoji: "🎁", syllables: ["re", "ga", "lo"], targetIdx: 1, options: ["ga", "ja"] },
+                    { word: "capote", emoji: "🧥", syllables: ["ca", "po", "te"], targetIdx: 1, options: ["po", "bo"] }
+                ],
+                final: [
+                    { word: "bota", emoji: "🥾", syllables: ["bo", "ta"], targetIdx: 1, options: ["ta", "da"] },
+                    { word: "luna", emoji: "🌙", syllables: ["lu", "na"], targetIdx: 1, options: ["na", "ma"] },
+                    { word: "gato", emoji: "🐱", syllables: ["ga", "to"], targetIdx: 1, options: ["to", "do"] },
+                    { word: "sapo", emoji: "🐸", syllables: ["sa", "po"], targetIdx: 1, options: ["po", "bo"] },
+                    { word: "vaca", emoji: "🐮", syllables: ["va", "ca"], targetIdx: 1, options: ["ca", "ga"] },
+                    { word: "dedo", emoji: "☝️", syllables: ["de", "do"], targetIdx: 1, options: ["do", "bo"] },
+                    { word: "piña", emoji: "🍍", syllables: ["pi", "ña"], targetIdx: 1, options: ["ña", "ma"] },
+                    { word: "rosa", emoji: "🌹", syllables: ["ro", "sa"], targetIdx: 1, options: ["sa", "za"] },
+                    { word: "bola", emoji: "⚽", syllables: ["bo", "la"], targetIdx: 1, options: ["la", "ra"] },
+                    { word: "pala", emoji: "🧹", syllables: ["pa", "la"], targetIdx: 1, options: ["la", "na"] },
+                    { word: "nube", emoji: "☁️", syllables: ["nu", "be"], targetIdx: 1, options: ["be", "pe"] },
+                    { word: "pera", emoji: "🍐", syllables: ["pe", "ra"], targetIdx: 1, options: ["ra", "la"] },
+                    { word: "lobo", emoji: "🐺", syllables: ["lo", "bo"], targetIdx: 1, options: ["bo", "po"] },
+                    { word: "toro", emoji: "🐂", syllables: ["to", "ro"], targetIdx: 1, options: ["ro", "lo"] },
+                    { word: "foca", emoji: "🦭", syllables: ["fo", "ca"], targetIdx: 1, options: ["ca", "ka"] },
+                    { word: "mesa", emoji: "🪑", syllables: ["me", "sa"], targetIdx: 1, options: ["sa", "za"] },
+                    { word: "casa", emoji: "🏠", syllables: ["ca", "sa"], targetIdx: 1, options: ["sa", "za"] },
+                    { word: "moto", emoji: "🏍️", syllables: ["mo", "to"], targetIdx: 1, options: ["to", "do"] },
+                    { word: "rana", emoji: "🐸", syllables: ["ra", "na"], targetIdx: 1, options: ["na", "la"] },
+                    { word: "copa", emoji: "🍷", syllables: ["co", "pa"], targetIdx: 1, options: ["pa", "ba"] }
+                ]
+            },
+            inversas: {
+                inicio: [
+                    { word: "árbol", emoji: "🌳", syllables: ["ár", "bol"], targetIdx: 0, options: ["ár", "ra"] },
+                    { word: "isla", emoji: "🏝️", syllables: ["is", "la"], targetIdx: 0, options: ["is", "si"] },
+                    { word: "espejo", emoji: "🪞", syllables: ["es", "pe", "jo"], targetIdx: 0, options: ["es", "se"] },
+                    { word: "antena", emoji: "📡", syllables: ["an", "te", "na"], targetIdx: 0, options: ["an", "na"] },
+                    { word: "indio", emoji: "🏹", syllables: ["in", "dio"], targetIdx: 0, options: ["in", "ni"] },
+                    { word: "escoba", emoji: "🧹", syllables: ["es", "co", "ba"], targetIdx: 0, options: ["es", "se"] },
+                    { word: "ángel", emoji: "👼", syllables: ["án", "gel"], targetIdx: 0, options: ["án", "na"] },
+                    { word: "arco", emoji: "🏹", syllables: ["ar", "co"], targetIdx: 0, options: ["ar", "ra"] },
+                    { word: "elfo", emoji: "🧝", syllables: ["el", "fo"], targetIdx: 0, options: ["el", "le"] },
+                    { word: "iglú", emoji: "🧊", syllables: ["ig", "lú"], targetIdx: 0, options: ["ig", "gi"] },
+                    { word: "olla", emoji: "🍲", syllables: ["o", "lla"], targetIdx: 0, options: ["o", "u"] },
+                    { word: "aspa", emoji: "✖️", syllables: ["as", "pa"], targetIdx: 0, options: ["as", "sa"] },
+                    { word: "imán", emoji: "🧲", syllables: ["i", "mán"], targetIdx: 0, options: ["i", "e"] },
+                    { word: "urna", emoji: "🗳️", syllables: ["ur", "na"], targetIdx: 0, options: ["ur", "ru"] },
+                    { word: "enano", emoji: "🍄", syllables: ["e", "na", "no"], targetIdx: 0, options: ["e", "a"] },
+                    { word: "ojo", emoji: "👁️", syllables: ["o", "jo"], targetIdx: 0, options: ["o", "i"] },
+                    { word: "uva", emoji: "🍇", syllables: ["u", "va"], targetIdx: 0, options: ["u", "o"] },
+                    { word: "oso", emoji: "🐻", syllables: ["o", "so"], targetIdx: 0, options: ["o", "e"] },
+                    { word: "espía", emoji: "🕵️", syllables: ["es", "pí", "a"], targetIdx: 0, options: ["es", "se"] },
+                    { word: "alto", emoji: "⬆️", syllables: ["al", "to"], targetIdx: 0, options: ["al", "la"] }
+                ],
+                mitad: [
+                    { word: "antorcha", emoji: "🔦", syllables: ["an", "tor", "cha"], targetIdx: 1, options: ["tor", "tro"] },
+                    { word: "ventana", emoji: "🪟", syllables: ["ven", "ta", "na"], targetIdx: 0, options: ["ven", "ne"] },
+                    { word: "martillo", emoji: "🔨", syllables: ["mar", "ti", "llo"], targetIdx: 0, options: ["mar", "ram"] },
+                    { word: "pincel", emoji: "🖌️", syllables: ["pin", "cel"], targetIdx: 1, options: ["cel", "ce"] },
+                    { word: "castillo", emoji: "🏰", syllables: ["cas", "ti", "llo"], targetIdx: 0, options: ["cas", "sac"] },
+                    { word: "serpiente", emoji: "🐍", syllables: ["ser", "pien", "te"], targetIdx: 0, options: ["ser", "res"] },
+                    { word: "montaña", emoji: "⛰️", syllables: ["mon", "ta", "ña"], targetIdx: 0, options: ["mon", "nom"] },
+                    { word: "bufanda", emoji: "🧣", syllables: ["bu", "fan", "da"], targetIdx: 1, options: ["fan", "naf"] },
+                    { word: "pintura", emoji: "🎨", syllables: ["pin", "tu", "ra"], targetIdx: 0, options: ["pin", "nip"] },
+                    { word: "volcán", emoji: "🌋", syllables: ["vol", "cán"], targetIdx: 0, options: ["vol", "lov"] },
+                    { word: "sandía", emoji: "🍉", syllables: ["san", "dí", "a"], targetIdx: 0, options: ["san", "nas"] },
+                    { word: "duende", emoji: "🧚", syllables: ["duen", "de"], targetIdx: 0, options: ["duen", "den"] },
+                    { word: "fuente", emoji: "⛲", syllables: ["fuen", "te"], targetIdx: 0, options: ["fuen", "nef"] },
+                    { word: "diente", emoji: "🦷", syllables: ["dien", "te"], targetIdx: 0, options: ["dien", "ned"] },
+                    { word: "puente", emoji: "🌉", syllables: ["puen", "te"], targetIdx: 0, options: ["puen", "nep"] },
+                    { word: "espada", emoji: "⚔️", syllables: ["es", "pa", "da"], targetIdx: 0, options: ["es", "se"] },
+                    { word: "alfombra", emoji: "🧶", syllables: ["al", "fom", "bra"], targetIdx: 1, options: ["fom", "mof"] },
+                    { word: "perla", emoji: "🦪", syllables: ["per", "la"], targetIdx: 0, options: ["per", "pre"] },
+                    { word: "barco", emoji: "🚢", syllables: ["bar", "co"], targetIdx: 0, options: ["bar", "bra"] },
+                    { word: "selva", emoji: "🌿", syllables: ["sel", "va"], targetIdx: 0, options: ["sel", "les"] }
+                ],
+                final: [
+                    { word: "tambor", emoji: "🥁", syllables: ["tam", "bor"], targetIdx: 1, options: ["bor", "bro"] },
+                    { word: "pastel", emoji: "🍰", syllables: ["pas", "tel"], targetIdx: 1, options: ["tel", "tle"] },
+                    { word: "papel", emoji: "📄", syllables: ["pa", "pel"], targetIdx: 1, options: ["pel", "ple"] },
+                    { word: "ratón", emoji: "🐭", syllables: ["ra", "tón"], targetIdx: 1, options: ["tón", "not"] },
+                    { word: "limón", emoji: "🍋", syllables: ["li", "món"], targetIdx: 1, options: ["món", "nom"] },
+                    { word: "melón", emoji: "🍈", syllables: ["me", "lón"], targetIdx: 1, options: ["lón", "nol"] },
+                    { word: "balcón", emoji: "🏙️", syllables: ["bal", "cón"], targetIdx: 1, options: ["cón", "noc"] },
+                    { word: "botón", emoji: "🔘", syllables: ["bo", "tón"], targetIdx: 1, options: ["tón", "not"] },
+                    { word: "avión", emoji: "✈️", syllables: ["a", "vión"], targetIdx: 1, options: ["vión", "niv"] },
+                    { word: "camión", emoji: "🚚", syllables: ["ca", "mión"], targetIdx: 1, options: ["mión", "nim"] },
+                    { word: "jamón", emoji: "🍖", syllables: ["ja", "món"], targetIdx: 1, options: ["món", "nom"] },
+                    { word: "jabón", emoji: "🧼", syllables: ["ja", "bón"], targetIdx: 1, options: ["bón", "nob"] },
+                    { word: "sillón", emoji: "🛋️", syllables: ["si", "llón"], targetIdx: 1, options: ["llón", "nol"] },
+                    { word: "bastón", emoji: "🦯", syllables: ["bas", "tón"], targetIdx: 1, options: ["tón", "not"] },
+                    { word: "delfín", emoji: "🐬", syllables: ["del", "fín"], targetIdx: 1, options: ["fín", "nif"] },
+                    { word: "jardín", emoji: "🏡", syllables: ["jar", "dín"], targetIdx: 1, options: ["dín", "nid"] },
+                    { word: "patín", emoji: "🛼", syllables: ["pa", "tín"], targetIdx: 1, options: ["tín", "nit"] },
+                    { word: "pantalón", emoji: "👖", syllables: ["pan", "ta", "lón"], targetIdx: 2, options: ["lón", "nol"] },
+                    { word: "dormir", emoji: "💤", syllables: ["dor", "mir"], targetIdx: 1, options: ["mir", "rim"] },
+                    { word: "comer", emoji: "🍴", syllables: ["co", "mer"], targetIdx: 1, options: ["mer", "rem"] }
+                ]
+            },
+            trabadas: {
+                inicio: [
+                    { word: "brazo", emoji: "💪", syllables: ["bra", "zo"], targetIdx: 0, options: ["bra", "bar"] },
+                    { word: "globo", emoji: "🎈", syllables: ["glo", "bo"], targetIdx: 0, options: ["glo", "gol"] },
+                    { word: "tren", emoji: "🚂", syllables: ["tren"], targetIdx: 0, options: ["tren", "ter"] },
+                    { word: "fresa", emoji: "🍓", syllables: ["fre", "sa"], targetIdx: 0, options: ["fre", "fer"] },
+                    { word: "grifo", emoji: "🚰", syllables: ["gri", "fo"], targetIdx: 0, options: ["gri", "gir"] },
+                    { word: "plato", emoji: "🍽️", syllables: ["pla", "to"], targetIdx: 0, options: ["pla", "pal"] },
+                    { word: "bruja", emoji: "🧙", syllables: ["bru", "ja"], targetIdx: 0, options: ["bru", "bur"] },
+                    { word: "clavo", emoji: "🔨", syllables: ["cla", "vo"], targetIdx: 0, options: ["cla", "cal"] },
+                    { word: "dragón", emoji: "🐲", syllables: ["dra", "gón"], targetIdx: 0, options: ["dra", "dar"] },
+                    { word: "fruta", emoji: "🍎", syllables: ["fru", "ta"], targetIdx: 0, options: ["fru", "fur"] },
+                    { word: "granja", emoji: "🚜", syllables: ["gran", "ja"], targetIdx: 0, options: ["gran", "gar"] },
+                    { word: "preso", emoji: "⛓️", syllables: ["pre", "so"], targetIdx: 0, options: ["pre", "per"] },
+                    { word: "trino", emoji: "🐦", syllables: ["tri", "no"], targetIdx: 0, options: ["tri", "tir"] },
+                    { word: "blanco", emoji: "⚪", syllables: ["blan", "co"], targetIdx: 0, options: ["blan", "bal"] },
+                    { word: "flaco", emoji: "🦴", syllables: ["fla", "co"], targetIdx: 0, options: ["fla", "fal"] },
+                    { word: "gloria", emoji: "🏆", syllables: ["glo", "ria"], targetIdx: 0, options: ["glo", "gol"] },
+                    { word: "pluma", emoji: "🪶", syllables: ["plu", "ma"], targetIdx: 0, options: ["plu", "pul"] },
+                    { word: "crema", emoji: "🧴", syllables: ["cre", "ma"], targetIdx: 0, options: ["cre", "cer"] },
+                    { word: "cruz", emoji: "✝️", syllables: ["cruz"], targetIdx: 0, options: ["cruz", "curz"] },
+                    { word: "flecha", emoji: "🏹", syllables: ["fle", "cha"], targetIdx: 0, options: ["fle", "fel"] }
+                ],
+                mitad: [
+                    { word: "libreta", emoji: "📓", syllables: ["li", "bre", "ta"], targetIdx: 1, options: ["bre", "ber"] },
+                    { word: "estrella", emoji: "⭐", syllables: ["es", "tre", "lla"], targetIdx: 1, options: ["tre", "ter"] },
+                    { word: "escribir", emoji: "✍️", syllables: ["es", "cri", "bir"], targetIdx: 1, options: ["cri", "cir"] },
+                    { word: "ombligo", emoji: "🔘", syllables: ["om", "bli", "go"], targetIdx: 1, options: ["bli", "bil"] },
+                    { word: "sobrino", emoji: "🧒", syllables: ["so", "bri", "no"], targetIdx: 1, options: ["bri", "bir"] },
+                    { word: "madrina", emoji: "✨", syllables: ["ma", "dri", "na"], targetIdx: 1, options: ["dri", "dir"] },
+                    { word: "padrino", emoji: "🤵", syllables: ["pa", "dri", "no"], targetIdx: 1, options: ["dri", "dir"] },
+                    { word: "refresco", emoji: "🥤", syllables: ["re", "fres", "co"], targetIdx: 1, options: ["fres", "fers"] },
+                    { word: "recreo", emoji: "🛝", syllables: ["re", "cre", "o"], targetIdx: 1, options: ["cre", "cer"] },
+                    { word: "sorpresa", emoji: "🎉", syllables: ["sor", "pre", "sa"], targetIdx: 1, options: ["pre", "per"] },
+                    { word: "vinagre", emoji: "🧪", syllables: ["vi", "na", "gre"], targetIdx: 2, options: ["gre", "ger"] },
+                    { word: "potrero", emoji: "🐎", syllables: ["po", "tre", "ro"], targetIdx: 1, options: ["tre", "ter"] },
+                    { word: "tablero", emoji: "🏁", syllables: ["ta", "ble", "ro"], targetIdx: 1, options: ["ta", "ble"] },
+                    { word: "granizo", emoji: "🌨️", syllables: ["gra", "ni", "zo"], targetIdx: 0, options: ["gra", "gar"] },
+                    { word: "abrazo", emoji: "🫂", syllables: ["a", "bra", "zo"], targetIdx: 1, options: ["bra", "bar"] },
+                    { word: "refrán", emoji: "📜", syllables: ["re", "frán"], targetIdx: 1, options: ["frán", "far"] },
+                    { word: "aplauso", emoji: "👏", syllables: ["a", "plau", "so"], targetIdx: 1, options: ["plau", "pal"] },
+                    { word: "ciclista", emoji: "🚴", syllables: ["ci", "clis", "ta"], targetIdx: 1, options: ["clis", "cal"] },
+                    { word: "soplar", emoji: "🌬️", syllables: ["so", "plar"], targetIdx: 1, options: ["plar", "pal"] },
+                    { word: "copla", emoji: "🎶", syllables: ["co", "pla"], targetIdx: 1, options: ["pla", "pal"] }
+                ],
+                final: [
+                    { word: "tigre", emoji: "🐯", syllables: ["ti", "gre"], targetIdx: 1, options: ["gre", "ger"] },
+                    { word: "cofre", emoji: "🏴‍☠️", syllables: ["co", "fre"], targetIdx: 1, options: ["fre", "fer"] },
+                    { word: "sobre", emoji: "✉️", syllables: ["so", "bre"], targetIdx: 1, options: ["bre", "ber"] },
+                    { word: "cabra", emoji: "🐐", syllables: ["ca", "bra"], targetIdx: 1, options: ["bra", "bar"] },
+                    { word: "cebra", emoji: "🦓", syllables: ["ce", "bra"], targetIdx: 1, options: ["bra", "bar"] },
+                    { word: "madre", emoji: "👩", syllables: ["ma", "dre"], targetIdx: 1, options: ["dre", "der"] },
+                    { word: "padre", emoji: "👨", syllables: ["pa", "dre"], targetIdx: 1, options: ["dre", "der"] },
+                    { word: "sangre", emoji: "🩸", syllables: ["san", "gre"], targetIdx: 1, options: ["gre", "ger"] },
+                    { word: "mugre", emoji: "🧼", syllables: ["mu", "gre"], targetIdx: 1, options: ["gre", "ger"] },
+                    { word: "pupitre", emoji: "🪑", syllables: ["pu", "pi", "tre"], targetIdx: 2, options: ["tre", "ter"] },
+                    { word: "sastre", emoji: "🧵", syllables: ["sas", "tre"], targetIdx: 1, options: ["tre", "ter"] },
+                    { word: "postre", emoji: "🍰", syllables: ["pos", "tre"], targetIdx: 1, options: ["tre", "ter"] },
+                    { word: "buitre", emoji: "🦅", syllables: ["bui", "tre"], targetIdx: 1, options: ["tre", "ter"] },
+                    { word: "liebre", emoji: "🐇", syllables: ["lie", "bre"], targetIdx: 1, options: ["bre", "ber"] },
+                    { word: "cobre", emoji: "🥉", syllables: ["co", "bre"], targetIdx: 1, options: ["bre", "ber"] },
+                    { word: "soplo", emoji: "🌬️", syllables: ["so", "plo"], targetIdx: 1, options: ["plo", "pol"] },
+                    { word: "acople", emoji: "🔌", syllables: ["a", "co", "ple"], targetIdx: 2, options: ["ple", "pel"] },
+                    { word: "noble", emoji: "👑", syllables: ["no", "ble"], targetIdx: 1, options: ["ble", "bel"] },
+                    { word: "cable", emoji: "🔌", syllables: ["ca", "ble"], targetIdx: 1, options: ["ble", "bel"] },
+                    { word: "mueble", emoji: "🛏️", syllables: ["mue", "ble"], targetIdx: 1, options: ["ble", "bel"] }
+                ]
+            },
+            mixtas: {
+                inicio: [
+                    { word: "barco", emoji: "🚢", syllables: ["bar", "co"], targetIdx: 0, options: ["bar", "bra"] },
+                    { word: "tarta", emoji: "🎂", syllables: ["tar", "ta"], targetIdx: 0, options: ["tar", "tra"] },
+                    { word: "selva", emoji: "🌿", syllables: ["sel", "va"], targetIdx: 0, options: ["sel", "les"] },
+                    { word: "carpa", emoji: "⛺", syllables: ["car", "pa"], targetIdx: 0, options: ["car", "cra"] },
+                    { word: "cerdo", emoji: "🐷", syllables: ["cer", "do"], targetIdx: 0, options: ["cer", "cre"] },
+                    { word: "dardo", emoji: "🎯", syllables: ["dar", "do"], targetIdx: 0, options: ["dar", "dra"] },
+                    { word: "gordo", emoji: "🍔", syllables: ["gor", "do"], targetIdx: 0, options: ["gor", "gro"] },
+                    { word: "norma", emoji: "📜", syllables: ["nor", "ma"], targetIdx: 0, options: ["nor", "ron"] },
+                    { word: "pardo", emoji: "🐻", syllables: ["par", "do"], targetIdx: 0, options: ["par", "pra"] },
+                    { word: "verde", emoji: "💚", syllables: ["ver", "de"], targetIdx: 0, options: ["ver", "vre"] },
+                    { word: "corto", emoji: "✂️", syllables: ["cor", "to"], targetIdx: 0, options: ["cor", "cro"] },
+                    { word: "largo", emoji: "📏", syllables: ["lar", "go"], targetIdx: 0, options: ["lar", "ral"] },
+                    { word: "burla", emoji: "😜", syllables: ["bur", "la"], targetIdx: 0, options: ["bur", "bru"] },
+                    { word: "forma", emoji: "📦", syllables: ["for", "ma"], targetIdx: 0, options: ["for", "fro"] },
+                    { word: "manta", emoji: "🛌", syllables: ["man", "ta"], targetIdx: 0, options: ["man", "nam"] },
+                    { word: "canto", emoji: "🎤", syllables: ["can", "to"], targetIdx: 0, options: ["can", "nac"] },
+                    { word: "punto", emoji: "📍", syllables: ["pun", "to"], targetIdx: 0, options: ["pun", "pnu"] },
+                    { word: "bolso", emoji: "👜", syllables: ["bol", "so"], targetIdx: 0, options: ["bol", "blo"] },
+                    { word: "culto", emoji: "🏛️", syllables: ["cul", "to"], targetIdx: 0, options: ["cul", "clu"] },
+                    { word: "bulto", emoji: "🎒", syllables: ["bul", "to"], targetIdx: 0, options: ["bul", "blu"] }
+                ],
+                mitad: [
+                    { word: "elefante", emoji: "🐘", syllables: ["e", "le", "fan", "te"], targetIdx: 2, options: ["fan", "fa"] },
+                    { word: "contento", emoji: "😊", syllables: ["con", "ten", "to"], targetIdx: 1, options: ["ten", "net"] },
+                    { word: "descansar", emoji: "😴", syllables: ["des", "can", "sar"], targetIdx: 1, options: ["can", "acn"] },
+                    { word: "manzana", emoji: "🍎", syllables: ["man", "za", "na"], targetIdx: 0, options: ["man", "na"] },
+                    { word: "ventana", emoji: "🪟", syllables: ["ven", "ta", "na"], targetIdx: 0, options: ["ven", "ne"] },
+                    { word: "garganta", emoji: "🧣", syllables: ["gar", "gan", "ta"], targetIdx: 1, options: ["gan", "na"] },
+                    { word: "serpiente", emoji: "🐍", syllables: ["ser", "pien", "te"], targetIdx: 1, options: ["pien", "pe"] },
+                    { word: "bufanda", emoji: "🧣", syllables: ["bu", "fan", "da"], targetIdx: 1, options: ["fan", "fa"] },
+                    { word: "pintura", emoji: "🎨", syllables: ["pin", "tu", "ra"], targetIdx: 0, options: ["pin", "pi"] },
+                    { word: "lámpara", emoji: "💡", syllables: ["lám", "pa", "ra"], targetIdx: 0, options: ["lám", "la"] },
+                    { word: "cáscara", emoji: "🍌", syllables: ["cás", "ca", "ra"], targetIdx: 0, options: ["cás", "ca"] },
+                    { word: "máscara", emoji: "🎭", syllables: ["más", "ca", "ra"], targetIdx: 0, options: ["más", "ma"] },
+                    { word: "fósforo", emoji: "🔥", syllables: ["fós", "fo", "ro"], targetIdx: 0, options: ["fós", "fo"] },
+                    { word: "cántaro", emoji: "🏺", syllables: ["cán", "ta", "ro"], targetIdx: 0, options: ["cán", "ca"] },
+                    { word: "paraguas", emoji: "☂️", syllables: ["pa", "ra", "guas"], targetIdx: 2, options: ["guas", "gu"] },
+                    { word: "pimiento", emoji: "🫑", syllables: ["pi", "mien", "to"], targetIdx: 1, options: ["pi", "mi"] },
+                    { word: "invierno", emoji: "❄️", syllables: ["in", "vier", "no"], targetIdx: 1, options: ["vier", "vi"] },
+                    { word: "estante", emoji: "📚", syllables: ["es", "tan", "te"], targetIdx: 1, options: ["tan", "ta"] },
+                    { word: "volante", emoji: "🎡", syllables: ["vo", "lan", "te"], targetIdx: 1, options: ["lan", "la"] },
+                    { word: "picante", emoji: "🌶️", syllables: ["pi", "can", "te"], targetIdx: 1, options: ["can", "ca"] }
+                ],
+                final: [
+                    { word: "pincel", emoji: "🖌️", syllables: ["pin", "cel"], targetIdx: 1, options: ["cel", "cle"] },
+                    { word: "tambor", emoji: "🥁", syllables: ["tam", "bor"], targetIdx: 1, options: ["bor", "bro"] },
+                    { word: "pastor", emoji: "🐑", syllables: ["pas", "tor"], targetIdx: 1, options: ["tor", "tro"] },
+                    { word: "carril", emoji: "🛤️", syllables: ["ca", "rril"], targetIdx: 1, options: ["rril", "rli"] },
+                    { word: "barril", emoji: "🛢️", syllables: ["ba", "rril"], targetIdx: 1, options: ["rril", "rli"] },
+                    { word: "motor", emoji: "⚙️", syllables: ["mo", "tor"], targetIdx: 1, options: ["tor", "tro"] },
+                    { word: "color", emoji: "🌈", syllables: ["co", "lor"], targetIdx: 1, options: ["lor", "lro"] },
+                    { word: "valor", emoji: "💎", syllables: ["va", "lor"], targetIdx: 1, options: ["lor", "lro"] },
+                    { word: "calor", emoji: "🌡️", syllables: ["ca", "lor"], targetIdx: 1, options: ["lor", "lro"] },
+                    { word: "sabor", emoji: "👅", syllables: ["sa", "bor"], targetIdx: 1, options: ["bor", "bro"] },
+                    { word: "labor", emoji: "👷", syllables: ["la", "bor"], targetIdx: 1, options: ["bor", "bro"] },
+                    { word: "favor", emoji: "🙏", syllables: ["fa", "vor"], targetIdx: 1, options: ["vor", "vro"] },
+                    { word: "tenor", emoji: "👨‍🎤", syllables: ["te", "nor"], targetIdx: 1, options: ["nor", "nro"] },
+                    { word: "vapor", emoji: "💨", syllables: ["va", "por"], targetIdx: 1, options: ["por", "pro"] },
+                    { word: "sudor", emoji: "💦", syllables: ["su", "dor"], targetIdx: 1, options: ["dor", "dro"] },
+                    { word: "rigor", emoji: "📏", syllables: ["ri", "gor"], targetIdx: 1, options: ["gor", "gro"] },
+                    { word: "humor", emoji: "🤡", syllables: ["hu", "mor"], targetIdx: 1, options: ["mor", "mro"] },
+                    { word: "temor", emoji: "😨", syllables: ["te", "mor"], targetIdx: 1, options: ["mor", "mro"] },
+                    { word: "honor", emoji: "🎖️", syllables: ["ho", "nor"], targetIdx: 1, options: ["nor", "nro"] },
+                    { word: "pastor", emoji: "✝️", syllables: ["pas", "tor"], targetIdx: 1, options: ["tor", "tro"] }
+                ]
+            }
+        };
+
+        let currentCategory = "";
+        let currentPosition = "";
+        let currentLevel = 0;
+        let dragItem = null;
+        let offset = { x: 0, y: 0 };
+        
+        let studentName = "";
+        let sessionErrors = []; 
+
+        const viewContainer = document.getElementById('view-container');
+
+        // --- SISTEMA DE VOZ ---
+        function hablar(texto, cancelar = true) {
+            if ('speechSynthesis' in window) {
+                if (cancelar) window.speechSynthesis.cancel();
+                const msg = new SpeechSynthesisUtterance(texto);
+                msg.lang = 'es-ES';
+                msg.rate = 0.85;
+                msg.pitch = 1.1;
+                window.speechSynthesis.speak(msg);
+            }
+        }
+
+        // --- VISTAS ---
+
+        function showLogin() {
+            viewContainer.innerHTML = `
+                <div class="fade-in space-y-6 flex flex-col items-center">
+                    <p class="text-gray-500 font-bold text-center">¡Hola! Escribe el nombre del alumno para empezar:</p>
+                    <input id="student-name-input" type="text" placeholder="Escribe el nombre aquí" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-purple-100 text-center text-xl font-bold outline-none focus:border-purple-400">
+                    <button onclick="saveName()" class="w-full py-4 bg-purple-600 text-white rounded-2xl font-bold text-xl shadow-lg hover:bg-purple-700 transition-colors">Entrar</button>
+                </div>
+            `;
+            setTimeout(() => document.getElementById('student-name-input').focus(), 100);
+        }
+
+        function saveName() {
+            const name = document.getElementById('student-name-input').value.trim();
+            if(!name) { hablar("Por favor, escribe el nombre."); return; }
+            studentName = name;
+            hablar("Hola " + name);
+            showMainMenu();
+        }
+
+        function showMainMenu() {
+            viewContainer.innerHTML = `
+                <div class="fade-in space-y-3">
+                    <p class="text-center text-gray-400 font-bold mb-4 text-xs tracking-widest uppercase">Alumno: ${studentName}</p>
+                    <button onclick="selectCategory('directas')" class="menu-card w-full p-5 bg-blue-500 text-white rounded-3xl font-bold text-lg shadow-md flex items-center justify-between">
+                        <span>Directas (CV)</span>
+                        <span class="text-xl">➔</span>
+                    </button>
+                    <button onclick="selectCategory('inversas')" class="menu-card w-full p-5 bg-emerald-500 text-white rounded-3xl font-bold text-lg shadow-md flex items-center justify-between">
+                        <span>Inversas (VC)</span>
+                        <span class="text-xl">➔</span>
+                    </button>
+                    <button onclick="selectCategory('trabadas')" class="menu-card w-full p-5 bg-purple-500 text-white rounded-3xl font-bold text-lg shadow-md flex items-center justify-between">
+                        <span>Trabadas (CCV)</span>
+                        <span class="text-xl">➔</span>
+                    </button>
+                    <button onclick="selectCategory('mixtas')" class="menu-card w-full p-5 bg-orange-500 text-white rounded-3xl font-bold text-lg shadow-md flex items-center justify-between">
+                        <span>Mixtas (CVC)</span>
+                        <span class="text-xl">➔</span>
+                    </button>
+
+                    <button onclick="showLogin()" class="w-full py-3 mt-4 text-gray-400 font-bold text-sm underline">Cambiar de alumno</button>
+                </div>
+            `;
+        }
+
+        function selectCategory(cat) {
+            currentCategory = cat;
+            hablar(cat);
+            showPositionMenu();
+        }
+
+        function showPositionMenu() {
+            viewContainer.innerHTML = `
+                <div class="fade-in space-y-4">
+                    <button onclick="showMainMenu()" class="text-gray-400 font-bold text-xs mb-4 uppercase tracking-tighter">← Volver al menú</button>
+                    <p class="text-center text-gray-500 font-bold mb-6 uppercase tracking-tight text-sm">¿En qué parte de la palabra?</p>
+                    <button onclick="startMode('inicio')" class="menu-card w-full p-6 bg-white border-2 border-gray-100 text-slate-700 rounded-3xl font-bold text-xl hover:border-blue-400 transition-colors">Al inicio</button>
+                    <button onclick="startMode('mitad')" class="menu-card w-full p-6 bg-white border-2 border-gray-100 text-slate-700 rounded-3xl font-bold text-xl hover:border-blue-400 transition-colors">En medio</button>
+                    <button onclick="startMode('final')" class="menu-card w-full p-6 bg-white border-2 border-gray-100 text-slate-700 rounded-3xl font-bold text-xl hover:border-blue-400 transition-colors">Al final</button>
+                </div>
+            `;
+        }
+
+        function startMode(pos) {
+            currentPosition = pos;
+            currentLevel = 0;
+            sessionErrors = [];
+            showGame();
+        }
+
+        function showGame() {
+            const data = gameLibrary[currentCategory][currentPosition][currentLevel];
+            const posText = currentPosition === "inicio" ? "primera" : currentPosition === "mitad" ? "de en medio" : "última";
+
+            viewContainer.innerHTML = `
+                <div class="fade-in flex flex-col items-center flex-1 h-full">
+                    <div class="w-full flex justify-between items-center mb-2">
+                        <button onclick="showPositionMenu()" class="text-gray-400 text-[10px] font-bold uppercase tracking-tighter">← Salir</button>
+                        <div class="flex items-center gap-2">
+                             <div class="h-2 w-20 bg-gray-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-yellow-400 transition-all duration-300" style="width: ${((currentLevel+1)/20)*100}%"></div>
+                             </div>
+                             <span class="text-[10px] font-bold text-gray-300">${currentLevel+1}/20</span>
+                        </div>
+                    </div>
+
+                    <p class="text-gray-600 font-bold text-center mb-4 leading-tight text-sm">
+                        ¿Cuál es la <span class="text-purple-600">${posText}</span> sílaba?
+                    </p>
+
+                    <button id="audio-btn" class="mb-4 p-3 bg-purple-600 text-white rounded-full shadow-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217z"/>
+                        </svg>
+                    </button>
+
+                    <div id="image-frame" class="w-32 h-32 sm:w-40 sm:h-40 bg-white rounded-[2.5rem] flex items-center justify-center text-[5.5rem] sm:text-[7rem] shadow-inner border-4 border-white mb-6">
+                        ${data.emoji}
+                    </div>
+
+                    <div id="word-slots" class="flex gap-2 h-14 items-center mb-8 justify-center">
+                        <!-- Slots -->
+                    </div>
+
+                    <div class="mt-auto w-full p-4 bg-gray-50 rounded-3xl border border-gray-100">
+                        <div id="options-pool" class="flex justify-center gap-3 flex-wrap">
+                            <!-- Opciones -->
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('audio-btn').onclick = () => hablar(data.word);
+
+            const slots = document.getElementById('word-slots');
+            data.syllables.forEach((syl, i) => {
+                if (i === data.targetIdx) {
+                    slots.innerHTML += `<div id="drop-target" class="w-14 h-14 border-4 border-dashed border-gray-200 rounded-xl flex items-center justify-center text-xl font-bold text-gray-200 bg-white">?</div>`;
+                } else {
+                    slots.innerHTML += `<div class="w-14 h-14 border-4 border-gray-50 rounded-xl flex items-center justify-center text-xl font-bold text-gray-400 bg-white/50">${syl}</div>`;
+                }
+            });
+
+            const pool = document.getElementById('options-pool');
+            [...data.options].sort(() => Math.random() - 0.5).forEach(syl => {
+                const btn = document.createElement('div');
+                btn.className = "syllable-card w-14 h-14 bg-white border-2 border-purple-100 rounded-xl flex items-center justify-center text-xl font-bold text-purple-600 shadow-sm";
+                btn.innerText = syl;
+                btn.dataset.syl = syl;
+                btn.addEventListener('pointerdown', onPointerDown);
+                pool.appendChild(btn);
+            });
+        }
+
+        // --- ARRASTRE ---
+
+        function onPointerDown(e) {
+            dragItem = e.currentTarget;
+            hablar(dragItem.dataset.syl);
+            const rect = dragItem.getBoundingClientRect();
+            offset.x = e.clientX - rect.left;
+            offset.y = e.clientY - rect.top;
+            dragItem.style.position = 'fixed';
+            dragItem.style.width = rect.width + 'px';
+            dragItem.style.height = rect.height + 'px';
+            dragItem.style.left = rect.left + 'px';
+            dragItem.style.top = rect.top + 'px';
+            dragItem.style.zIndex = '1000';
+            dragItem.style.pointerEvents = 'none';
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
+        }
+
+        function onPointerMove(e) {
+            if (!dragItem) return;
+            dragItem.style.left = (e.clientX - offset.x) + 'px';
+            dragItem.style.top = (e.clientY - offset.y) + 'px';
+            const target = document.getElementById('drop-target');
+            const tRect = target.getBoundingClientRect();
+            const isOver = !(e.clientX < tRect.left || e.clientX > tRect.right || e.clientY < tRect.top || e.clientY > tRect.bottom);
+            target.classList.toggle('drop-zone-active', isOver);
+        }
+
+        function onPointerUp(e) {
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+            const target = document.getElementById('drop-target');
+            if(!target) return;
+            const tRect = target.getBoundingClientRect();
+            const isOver = !(e.clientX < tRect.left || e.clientX > tRect.right || e.clientY < tRect.top || e.clientY > tRect.bottom);
+
+            const levelData = gameLibrary[currentCategory][currentPosition][currentLevel];
+
+            if (isOver) {
+                if (dragItem.dataset.syl === levelData.syllables[levelData.targetIdx]) {
+                    target.innerText = dragItem.dataset.syl;
+                    target.className = "w-14 h-14 border-4 border-green-500 rounded-xl flex items-center justify-center text-xl font-bold text-green-600 bg-green-50 correct-pop";
+                    dragItem.remove();
+                    hablar(levelData.word);
+                    setTimeout(() => hablar("¡Bien hecho!", false), 800);
+                    setTimeout(() => {
+                        currentLevel++;
+                        if (currentLevel < 20) showGame();
+                        else showLevelWin();
+                    }, 1600);
+                } else {
+                    sessionErrors.push({ word: levelData.word, correct: levelData.syllables[levelData.targetIdx], failed: dragItem.dataset.syl });
+                    dragItem.style.position = 'static';
+                    dragItem.style.pointerEvents = 'auto';
+                    target.classList.remove('drop-zone-active');
+                    hablar("Prueba otra vez", false);
+                }
+            } else {
+                dragItem.style.position = 'static';
+                dragItem.style.pointerEvents = 'auto';
+            }
+            dragItem = null;
+        }
+
+        // --- REPORTE ---
+
+        function generateReportText() {
+            let text = `INFORME: ${studentName}\n`;
+            text += `Categoría: ${currentCategory.toUpperCase()} (${currentPosition})\n`;
+            text += `Aciertos: ${20 - sessionErrors.length}/20\n`;
+            text += `Errores (${sessionErrors.length}):\n`;
+            sessionErrors.forEach((e, i) => {
+                text += `${i+1}. ${e.word}: Puso "${e.failed}" (Era "${e.correct}")\n`;
+            });
+            return text;
+        }
+
+        function showLevelWin() {
+            hablar("¡Genial! Fase terminada");
+            viewContainer.innerHTML = `
+                <div class="fade-in flex flex-col h-full text-center">
+                    <h2 class="text-2xl font-black text-purple-600 mb-2">¡HAS GANADO!</h2>
+                    <p class="text-gray-400 text-sm mb-4">Alumno: ${studentName}</p>
+                    
+                    <div class="bg-gray-50 rounded-2xl p-4 text-left text-xs mb-4 flex-1 overflow-y-auto border border-gray-100 font-mono">
+                        ${generateReportText().replace(/\n/g, '<br>')}
+                    </div>
+
+                    <div class="space-y-3">
+                        <button onclick="copyToClipboard()" class="w-full py-5 bg-emerald-500 text-white rounded-2xl font-bold text-lg shadow-md hover:bg-emerald-600 transition-colors">📋 Copiar Informe</button>
+                        <button onclick="showMainMenu()" class="w-full py-4 bg-purple-600 text-white rounded-2xl font-bold hover:bg-purple-700 transition-colors">Menú Principal</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function copyToClipboard() {
+            const text = generateReportText();
+            const tempInput = document.createElement("textarea");
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+            hablar("Informe copiado al portapapeles. ¡Ahora puedes pegarlo donde quieras!");
+        }
+
+        window.onload = showLogin;
+    </script>
+</body>
+</html>
+
