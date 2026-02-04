@@ -1,38 +1,68 @@
-
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MODO PRO - Juego Educativo Independiente</title>
-    
-    <!-- CARGA LOCAL: Rutas relativas para evitar bloqueos de firewall -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trazado Mágico - Nogales PT</title>
     <link rel="stylesheet" href="./css/style.css">
 </head>
-<body>
-    <div id="game-container">
-        <header>
-            <div class="badge">MODO PRO - OFFLINE SAFE</div>
-            <h1>Desafío Educativo PRO</h1>
-            <p>Este juego se ejecuta 100% en local sin conexiones externas.</p>
-        </header>
+<body class="h-full">
 
-        <main>
-            <div id="canvas-wrapper">
-                <!-- Aquí iría la lógica del juego o canvas -->
-                <div class="placeholder-game">
-                    <div class="icon">🎮</div>
-                    <button id="start-btn">Comenzar Reto</button>
-                </div>
+    <div id="start-overlay">
+        <div class="bg-circle bc-1"></div>
+        <div class="bg-circle bc-2"></div>
+        
+        <div class="intro-container">
+            <div class="logo-container-inicio">
+                <img src="https://i.imgur.com/bPgvR72.jpeg" alt="Logo Nogales PT" class="logo-inicio">
             </div>
-        </main>
+            <h1 class="main-title">Trazado Mágico</h1>
+            <p class="main-subtitle">Aprende con Nogales PT</p>
+        </div>
 
-        <footer>
-            <p>NogalesPT Educational Hub &copy; 2025</p>
-        </footer>
+        <button id="btn-start" class="btn-empezar pulse-btn">¡Empezar!</button>
     </div>
 
-    <!-- CARGA LOCAL: Script principal -->
+    <header class="game-header">
+        <div class="header-inner">
+            <div class="header-top">
+                <img src="https://i.imgur.com/bPgvR72.jpeg" alt="Logo" class="logo-header">
+                <div id="progress-indicator" class="badge-progreso">Nogales PT · A-Z</div>
+            </div>
+            <div id="letter-selector" class="no-scrollbar selector-letras"></div>
+        </div>
+    </header>
+
+    <main class="game-main">
+        <div id="game-wrapper">
+            <div id="game-container" class="canvas-card">
+                <svg id="svg-ghost" class="layer svg-ghost" viewBox="0 0 100 100"></svg>
+                <canvas id="main-canvas" class="layer canvas-real"></canvas>
+                <svg id="svg-ui" class="layer pointer-none" viewBox="0 0 100 100"></svg>
+
+                <div id="quiz-overlay" class="overlay hidden">
+                    <h2 class="quiz-text">¿Qué empieza por <span id="quiz-char" class="char-big">A</span>?</h2>
+                    <div id="quiz-options" class="quiz-grid"></div>
+                </div>
+
+                <div id="win-overlay" class="overlay win-bg hidden">
+                    <img src="https://media4.giphy.com/media/v1.Y2lkPTZjMDliOTUyamNjeWpzNWZnM2kydHlmY2NjdGZ5ZGd6enh2eTluZ3RrMTdzNGdzZSZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/lpyDnoRy0pNjyvLK04/giphy.gif" alt="Felicidades" class="win-gif jump-in">
+                    <h2 class="win-title">¡Genial!</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="hint-box">
+            <p id="hint-msg"></p>
+        </div>
+    </main>
+
+    <footer class="game-footer">
+        <button id="btn-clear" class="btn-3d">
+            REINICIAR LETRA
+        </button>
+    </footer>
+
     <script src="./js/main.js"></script>
 </body>
 </html>
