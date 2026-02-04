@@ -1,3 +1,8 @@
+/**
+ * MOTOR DE JUEGO: TRAZADO MÁGICO
+ * NogalesPT - Versión Autónoma Local Optimizada
+ */
+
 const canvas = document.getElementById('main-canvas');
 const ctx = canvas.getContext('2d');
 const svgGhost = document.getElementById('svg-ghost');
@@ -52,7 +57,7 @@ function init() {
     alphabet.forEach(l => {
         const btn = document.createElement('div');
         btn.innerText = l;
-        btn.className = `min-w-[44px] md:min-w-[48px] h-10 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-bold text-lg md:text-xl cursor-pointer transition-all letter-pill bg-white text-slate-400 shadow-sm`;
+        btn.className = `letter-pill`;
         btn.onclick = () => { if(gameActive && !estaCambiando) loadLetter(l); };
         letterSelector.appendChild(btn);
     });
@@ -64,26 +69,30 @@ function init() {
     document.getElementById('btn-clear').onclick = () => { if(gameActive && !estaCambiando) loadLetter(curL); };
 
     btnStart.onclick = () => {
+        speak(""); // Unlocks speech audio
         gameActive = true;
         startOverlay.style.display = 'none';
         loadLetter('A');
     };
 }
 
-function speak(text) {
-    if (!window.speechSynthesis || !gameActive) return;
+function speak(text, callback = null) {
+    if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'es-ES';
     utterance.rate = 1.0;
     utterance.pitch = 1.1;
+    if (callback) utterance.onend = callback;
     window.speechSynthesis.speak(utterance);
 }
 
 function resize() {
     const size = Math.min(gameWrapper.clientWidth, gameWrapper.clientHeight, 450);
-    gameContainer.style.width = size + 'px'; gameContainer.style.height = size + 'px';
-    canvas.width = size; canvas.height = size;
+    gameContainer.style.width = size + 'px'; 
+    gameContainer.style.height = size + 'px';
+    canvas.width = size; 
+    canvas.height = size;
     render();
 }
 
@@ -97,7 +106,7 @@ function loadLetter(l) {
     
     Array.from(letterSelector.children).forEach(btn => {
         const isAct = btn.innerText === l;
-        btn.className = `min-w-[44px] md:min-w-[48px] h-10 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-bold text-lg md:text-xl cursor-pointer transition-all letter-pill ${isAct?'active':'bg-white text-slate-400'}`;
+        btn.classList.toggle('active', isAct);
         if (isAct) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     });
     render();
@@ -109,8 +118,10 @@ function render() {
     alphabetData[curL].strokes.forEach(s => {
         const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
         p.setAttribute("d", s.map((pt, i) => `${i===0?'M':'L'} ${pt.x} ${pt.y}`).join(' '));
-        p.setAttribute("fill", "none"); p.setAttribute("stroke", "#10b981"); 
-        p.setAttribute("stroke-width", "16"); p.setAttribute("stroke-linecap", "round");
+        p.setAttribute("fill", "none"); 
+        p.setAttribute("stroke", "#10b981"); 
+        p.setAttribute("stroke-width", "16"); 
+        p.setAttribute("stroke-linecap", "round");
         svgGhost.appendChild(p);
     });
     svgUi.innerHTML = '';
@@ -154,7 +165,7 @@ function setupInteraction() {
         
         const target = stroke[pIdx];
         const d = Math.hypot(pos.x - target.x, pos.y - target.y);
-        const radioDeteccion = 9; 
+        const radioDeteccion = 10; 
 
         if (pIdx === 0 && d < radioDeteccion && !strokeActive) {
             strokeActive = true;
@@ -211,8 +222,8 @@ function showQuiz() {
     
     opts.forEach(o => {
         const btn = document.createElement('button');
-        btn.className = "flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border-2 border-slate-50 font-bold active:scale-95 transition-all w-full";
-        btn.innerHTML = `<span class="text-3xl">${o.i}</span> <span class="text-lg text-slate-700">${o.w}</span>`;
+        btn.className = "quiz-btn";
+        btn.innerHTML = `<span class="text-3xl">${o.i}</span> <span class="text-lg text-slate-700 font-bold">${o.w}</span>`;
         btn.onclick = () => {
             if (o.w === d.word) {
                 winOverlay.classList.remove('hidden');
@@ -222,9 +233,13 @@ function showQuiz() {
                     loadLetter(siguiente);
                 }, 3500);
             } else {
-                btn.classList.add('border-red-200', 'bg-red-50');
+                btn.style.borderColor = "#fecaca";
+                btn.style.backgroundColor = "#fef2f2";
                 speak("¡Prueba otra vez!");
-                setTimeout(() => btn.classList.remove('border-red-200', 'bg-red-50'), 800);
+                setTimeout(() => {
+                    btn.style.borderColor = "#f1f5f9";
+                    btn.style.backgroundColor = "#ffffff";
+                }, 800);
             }
         };
         optsCont.appendChild(btn);
