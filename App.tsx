@@ -53,7 +53,7 @@ const renderContentWithVideos = (content: string) => {
 // --- COMPONENTES AUXILIARES ---
 
 /**
- * RichTextEditor Profesional "Nogales Style"
+ * RichTextEditor Profesional con corrección de botones y selectores de fuente/color/tamaño
  */
 const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: string) => void }) => {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -118,12 +118,14 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
           <ToolbarButton onClick={() => exec('justifyFull')} icon={AlignJustify} title="Justificado" />
         </div>
 
-        <div className="flex gap-0.5">
+        <div className="flex gap-0.5 items-center">
           <ToolbarButton onClick={() => {const url = prompt('URL:'); if(url) exec('createLink', url)}} icon={LinkIcon} title="Enlace" />
           <ToolbarButton onClick={() => {const url = prompt('Imagen URL:'); if(url) exec('insertImage', url)}} icon={ImageIcon} title="Imagen" />
           <ToolbarButton onClick={handleTable} icon={TableIcon} title="Tabla" />
           <ToolbarButton onClick={() => exec('insertHorizontalRule')} icon={Minus} title="Línea horizontal" />
+          {/* CORRECCIÓN: Se añade type="button" para evitar el guardado automático al hacer clic */}
           <button 
+            type="button" 
             onClick={() => colorInputRef.current?.click()}
             className="p-1.5 rounded transition-all hover:bg-slate-200 border border-transparent text-indigo-600 flex flex-col items-center gap-0"
             title="Color de fuente"
@@ -159,12 +161,14 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
         <select 
           className="bg-white border border-slate-300 rounded text-[11px] px-2 py-1 outline-none font-medium h-7"
           onChange={(e) => exec('fontName', e.target.value)}
-          defaultValue="Quicksand"
+          defaultValue="Inherit"
         >
-          <option value="Arial">Fuente (Arial)</option>
+          <option value="">Fuente (Predeterminada)</option>
+          <option value="Arial">Arial</option>
           <option value="Comic Sans MS">Comic Sans</option>
           <option value="Courier New">Courier New</option>
           <option value="Georgia">Georgia</option>
+          <option value="Impact">Impact</option>
           <option value="Tahoma">Tahoma</option>
           <option value="Times New Roman">Times New Roman</option>
           <option value="Verdana">Verdana</option>
@@ -176,12 +180,12 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
           onChange={(e) => exec('fontSize', e.target.value)}
           defaultValue="3"
         >
-          <option value="1">Tamaño (1 - Muy pequeño)</option>
+          <option value="1">Tamaño (1 - Mini)</option>
           <option value="2">2 - Pequeño</option>
           <option value="3">3 - Normal</option>
-          <option value="4">4 - Mediano</option>
-          <option value="5">5 - Grande</option>
-          <option value="6">6 - Muy Grande</option>
+          <option value="4">4 - Grande</option>
+          <option value="5">5 - Muy Grande</option>
+          <option value="6">6 - Extra Grande</option>
           <option value="7">7 - Gigante</option>
         </select>
       </div>
@@ -196,7 +200,7 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
       
       {/* ESTATUS BAR */}
       <div className="bg-slate-50 border-t border-slate-200 px-4 py-1 flex justify-end">
-        <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Editor Nogales PRO v2.0</span>
+        <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Editor Nogales PRO v2.1</span>
       </div>
     </div>
   );
