@@ -484,7 +484,7 @@ const App: React.FC = () => {
           <div className="hidden md:flex items-center gap-6">
             <button onClick={() => navigateTo(AppView.Explore)} className="text-xs font-black uppercase text-slate-500">Explorar</button>
             <button onClick={() => navigateTo(AppView.TopDocentes)} className="text-xs font-black uppercase text-slate-500">Ranking</button>
-            <button onClick={() => window.open('/juegos/pro/juego-ejemplo/index.html', '_blank')} className="text-xs font-black uppercase text-amber-500 border border-amber-200 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors flex items-center gap-2"><Zap size={14} fill="currentColor" /> Juegos PRO</button>
+            <button onClick={() => window.open('/juegos/pro/index.html', '_blank')} className="text-xs font-black uppercase text-amber-500 border border-amber-200 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors flex items-center gap-2"><Zap size={14} fill="currentColor" /> Juegos PRO</button>
             <button onClick={() => navigateTo(AppView.Upload)} className={`${themeClasses.bg} text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2`}><Upload size={16} /> Subir</button>
             <button onClick={() => navigateTo(AppView.Account)} className="flex items-center gap-2 p-1.5 pr-4 rounded-full border bg-slate-100">{currentUser?.avatar ? <img src={currentUser.avatar} className="w-8 h-8 rounded-full object-cover" /> : <UserIcon size={18} />}<span className="text-[10px] font-black uppercase">{currentUser ? currentUser.name : 'Mi Cuenta'}</span></button>
           </div>
@@ -500,7 +500,7 @@ const App: React.FC = () => {
             <div className="flex-1 p-6 space-y-6">
               <button onClick={() => navigateTo(AppView.Explore)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><LayoutGrid size={20} /> Explorar</button>
               <button onClick={() => navigateTo(AppView.TopDocentes)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><Trophy size={20} /> Ranking</button>
-              <button onClick={() => window.open('/juegos/pro/juego-ejemplo/index.html', '_blank')} className="flex items-center gap-4 w-full text-left font-black uppercase text-amber-500 hover:text-amber-600"><Zap size={20} fill="currentColor" /> Juegos PRO</button>
+              <button onClick={() => window.open('/juegos/pro/index.html', '_blank')} className="flex items-center gap-4 w-full text-left font-black uppercase text-amber-500 hover:text-amber-600"><Zap size={20} fill="currentColor" /> Juegos PRO</button>
               <button onClick={() => navigateTo(AppView.Upload)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><Upload size={20} /> Subir Material</button>
               <button onClick={() => navigateTo(AppView.Account)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><UserCircle size={20} /> Mi Cuenta</button>
             </div>
