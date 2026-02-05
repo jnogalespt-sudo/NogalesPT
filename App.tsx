@@ -42,7 +42,6 @@ const stripHtml = (html: string) => {
 
 const renderContentWithVideos = (content: string) => {
   if (!content) return "";
-  // Corrección de la expresión regular para YouTube
   const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})(?:[^\s<]*)/g;
   
   return content.replace(youtubeRegex, (match, videoId) => {
@@ -350,14 +349,23 @@ const App: React.FC = () => {
         const params = new URLSearchParams(window.location.search);
         const viewParam = params.get('view') as AppView;
         const idParam = params.get('id');
-        const catParam = params.get('category') as MainCategory;
+        const catParam = params.get('category');
 
-        if (catParam) setActiveCategory(catParam);
-        if (viewParam) {
-          setView(viewParam);
-          if (viewParam === AppView.Detail && idParam) {
-            const found = resData.find((r: Resource) => r.id === idParam);
-            if (found) setSelectedResource(found);
+        if (viewParam === AppView.Blog) {
+          if (catParam && BLOG_CATEGORIES.includes(catParam)) {
+            setActiveBlogCategory(catParam);
+          }
+          setView(AppView.Blog);
+        } else {
+          if (catParam && (catParam === 'General' || catParam === 'PT-AL')) {
+            setActiveCategory(catParam as MainCategory);
+          }
+          if (viewParam) {
+            setView(viewParam);
+            if (viewParam === AppView.Detail && idParam) {
+              const found = resData.find((r: Resource) => r.id === idParam);
+              if (found) setSelectedResource(found);
+            }
           }
         }
       } catch (error) { console.error("Error cargando app:", error); } finally { setIsLoading(false); }
@@ -538,6 +546,11 @@ const App: React.FC = () => {
     window.open(url, '_blank');
   };
 
+  const handleBlogCategoryClick = (cat: string) => {
+    setActiveBlogCategory(cat);
+    navigateTo(AppView.Blog, { category: cat });
+  };
+
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-white flex-col gap-6"><div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div><h2 className="text-xl font-black text-slate-800 uppercase tracking-tighter">NOGALES<span className="text-indigo-600">PT</span></h2></div>;
 
   if (isStandalone && standaloneId) {
@@ -617,7 +630,7 @@ const App: React.FC = () => {
                 {BLOG_CATEGORIES.map(cat => (
                   <button 
                     key={cat} 
-                    onClick={() => setActiveBlogCategory(cat)}
+                    onClick={() => handleBlogCategoryClick(cat)}
                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase border-2 transition-all ${activeBlogCategory === cat ? 'bg-indigo-600 border-transparent text-white shadow-lg' : 'bg-white border-slate-100 text-slate-400 hover:border-indigo-200'}`}
                   >
                     {cat}
