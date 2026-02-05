@@ -42,7 +42,9 @@ const stripHtml = (html: string) => {
 
 const renderContentWithVideos = (content: string) => {
   if (!content) return "";
+  // Corrección de la expresión regular para YouTube
   const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})(?:[^\s<]*)/g;
+  
   return content.replace(youtubeRegex, (match, videoId) => {
     return `
       <div class="my-8 aspect-video w-full rounded-[32px] overflow-hidden shadow-2xl bg-slate-900 border-4 border-white">
@@ -278,6 +280,7 @@ const App: React.FC = () => {
   const activeProfile = useMemo(() => users.find(u => u.email === viewingUserEmail), [users, viewingUserEmail]);
   const profileResources = useMemo(() => resources.filter(r => r.email === viewingUserEmail), [resources, viewingUserEmail]);
 
+  // --- SEO DINÁMICO MEJORADO ---
   useEffect(() => {
     let title = "Repositorio Colaborativo para Docentes | NOGALESPT";
     let description = "Materiales de calidad, interactivos y adaptados para maestros de PT y AL en Andalucía.";
@@ -291,14 +294,32 @@ const App: React.FC = () => {
         description = "Explora nuestro blog educativo con las mejores estrategias y recursos especializados en PT y AL para docentes.";
       } else {
         title = `Artículos y Estrategias sobre ${activeBlogCategory} | NOGALESPT`;
-        description = `Descubre artículos, estrategias y recursos especializados sobre ${activeBlogCategory} en el blog de NOGALESPT para maestros y profesionales.`;
+        description = `Descubre artículos, estrategias y recursos especializados sobre ${activeBlogCategory} en el blog de NOGALESPT para maestros y profesionales de la educación especial.`;
       }
+    } else if (view === AppView.Explore) {
+      title = `Explorar Recursos de ${activeCategory} | NOGALESPT`;
+      description = `Busca y filtra entre materiales educativos de ${activeCategory} adaptados por la comunidad docente.`;
     }
 
+    // Aplicar SEO al documento
     document.title = title;
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) metaDescription.setAttribute('content', description);
-  }, [view, selectedResource, activeBlogCategory]);
+    
+    const updateMeta = (name: string, content: string, attr: 'name' | 'property' = 'name') => {
+      let el = document.querySelector(`meta[${attr}="${name}"]`);
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute(attr, name);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
+    };
+
+    updateMeta('description', description);
+    updateMeta('og:title', title, 'property');
+    updateMeta('og:description', description, 'property');
+    updateMeta('og:url', window.location.href, 'property');
+
+  }, [view, selectedResource, activeBlogCategory, activeCategory]);
 
   const cleanGoogleDriveUrl = (url: string) => {
     if (url.includes('drive.google.com')) {
@@ -541,11 +562,11 @@ const App: React.FC = () => {
             <span className="text-xl font-black uppercase tracking-tighter">NOGALES<span className={themeClasses.text}>PT</span></span>
           </div>
           <div className="hidden md:flex items-center gap-6">
-            <button onClick={() => navigateTo(AppView.Explore)} className="text-xs font-black uppercase text-slate-500">Explorar</button>
-            <button onClick={() => navigateTo(AppView.Blog)} className="text-xs font-black uppercase text-slate-500">Blog</button>
-            <button onClick={() => navigateTo(AppView.TopDocentes)} className="text-xs font-black uppercase text-slate-500">Ranking</button>
-            <button onClick={() => navigateTo(AppView.Upload)} className={`${themeClasses.bg} text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2`}><Upload size={16} /> Subir</button>
-            <button onClick={() => navigateTo(AppView.Account)} className="flex items-center gap-2 p-1.5 pr-4 rounded-full border bg-slate-100">{currentUser?.avatar ? <img src={currentUser.avatar} className="w-8 h-8 rounded-full object-cover" /> : <UserIcon size={18} />}<span className="text-[10px] font-black uppercase">{currentUser ? currentUser.name : 'Mi Cuenta'}</span></button>
+            <button onClick={() => navigateTo(AppView.Explore)} className="text-xs font-black uppercase text-slate-500 hover:text-indigo-600 transition-colors">Explorar</button>
+            <button onClick={() => navigateTo(AppView.Blog)} className="text-xs font-black uppercase text-slate-500 hover:text-indigo-600 transition-colors">Blog</button>
+            <button onClick={() => navigateTo(AppView.TopDocentes)} className="text-xs font-black uppercase text-slate-500 hover:text-indigo-600 transition-colors">Ranking</button>
+            <button onClick={() => navigateTo(AppView.Upload)} className={`${themeClasses.bg} text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all`}><Upload size={16} /> Subir</button>
+            <button onClick={() => navigateTo(AppView.Account)} className="flex items-center gap-2 p-1.5 pr-4 rounded-full border bg-slate-100 hover:bg-slate-200 transition-colors">{currentUser?.avatar ? <img src={currentUser.avatar} className="w-8 h-8 rounded-full object-cover" /> : <UserIcon size={18} />}<span className="text-[10px] font-black uppercase">{currentUser ? currentUser.name : 'Mi Cuenta'}</span></button>
           </div>
           <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}><Menu size={24} /></button>
         </div>
@@ -567,11 +588,11 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {view !== AppView.Blog && (
+      {view !== AppView.Blog && view !== AppView.Account && view !== AppView.TopDocentes && (
         <div className="bg-white border-b border-slate-200 sticky top-16 z-[40]">
           <div className="max-w-7xl mx-auto flex overflow-x-auto no-scrollbar">
-            <button onClick={() => { setActiveCategory('General'); navigateTo(AppView.Explore); }} className={`flex-1 min-w-[180px] py-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase border-b-2 ${activeCategory === 'General' ? 'text-emerald-600 border-emerald-600 bg-emerald-50' : 'text-slate-400 border-transparent'}`}><BookOpen size={16} /> General</button>
-            <button onClick={() => { setActiveCategory('PT-AL'); navigateTo(AppView.Explore); }} className={`flex-1 min-w-[180px] py-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase border-b-2 ${activeCategory === 'PT-AL' ? 'text-indigo-600 border-indigo-600 bg-indigo-50' : 'text-slate-400 border-transparent'}`}><BrainCircuit size={16} /> PT y AL</button>
+            <button onClick={() => { setActiveCategory('General'); navigateTo(AppView.Explore); }} className={`flex-1 min-w-[180px] py-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase border-b-2 transition-all ${activeCategory === 'General' ? 'text-emerald-600 border-emerald-600 bg-emerald-50' : 'text-slate-400 border-transparent hover:text-slate-600'}`}><BookOpen size={16} /> General</button>
+            <button onClick={() => { setActiveCategory('PT-AL'); navigateTo(AppView.Explore); }} className={`flex-1 min-w-[180px] py-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase border-b-2 transition-all ${activeCategory === 'PT-AL' ? 'text-indigo-600 border-indigo-600 bg-indigo-50' : 'text-slate-400 border-transparent hover:text-slate-600'}`}><BrainCircuit size={16} /> PT y AL</button>
           </div>
         </div>
       )}
@@ -581,7 +602,7 @@ const App: React.FC = () => {
           <div className="py-24 text-center space-y-8 max-w-3xl mx-auto">
             <h1 className="text-5xl md:text-7xl font-black text-slate-900 leading-[1.05]">Repositorio <span className={themeClasses.text}>Colaborativo</span> para Docentes</h1>
             <p className="text-lg text-slate-500 font-medium">Materiales de calidad, interactivos y adaptados para maestros de PT y AL.</p>
-            <button onClick={() => navigateTo(AppView.Explore)} className={`${themeClasses.bg} text-white px-10 py-5 rounded-2xl font-black shadow-xl uppercase text-xs mx-auto`}>Explorar Ahora</button>
+            <button onClick={() => navigateTo(AppView.Explore)} className={`${themeClasses.bg} text-white px-10 py-5 rounded-2xl font-black shadow-xl uppercase text-xs mx-auto hover:scale-105 transition-transform`}>Explorar Ahora</button>
           </div>
         )}
 
@@ -692,7 +713,7 @@ const App: React.FC = () => {
 
         {view === AppView.Profile && activeProfile && (
           <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in duration-500">
-            <button onClick={() => navigateTo(AppView.Explore)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900"><ArrowLeft size={18}/> Volver</button>
+            <button onClick={() => navigateTo(AppView.Explore)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900 transition-colors"><ArrowLeft size={18}/> Volver</button>
             <div className="bg-white p-8 md:p-16 rounded-[48px] shadow-sm border border-slate-100 flex flex-col md:flex-row gap-12 items-center md:items-start">
               <img src={activeProfile.avatar || `https://ui-avatars.com/api/?name=${activeProfile.name}`} className="w-40 h-40 md:w-60 md:h-60 rounded-[48px] object-cover border-8 border-slate-50 shadow-2xl" />
               <div className="flex-1 space-y-6 text-center md:text-left">
@@ -709,9 +730,9 @@ const App: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {profileResources.map(res => (
                   <div key={res.id} onClick={() => { setSelectedResource(res); navigateTo(AppView.Detail, { id: res.id }); }} className="bg-white rounded-3xl border border-slate-200 overflow-hidden hover:shadow-xl group cursor-pointer flex flex-col">
-                    <div className="h-44 overflow-hidden"><img src={res.thumbnail} className="w-full h-full object-cover group-hover:scale-110" /></div>
+                    <div className="h-44 overflow-hidden"><img src={res.thumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
                     <div className="p-5 flex-1 flex flex-col">
-                      <h4 className="font-bold text-slate-800 text-sm mb-2 truncate">{res.title}</h4>
+                      <h4 className="font-bold text-slate-800 text-sm mb-2 truncate group-hover:text-indigo-600 transition-colors">{res.title}</h4>
                       <div className="mt-auto flex items-center justify-between">
                         <div className={`text-[10px] font-black ${themeClasses.text} uppercase`}>{res.subject}</div>
                         {res.kind === 'blog' && <Newspaper size={12} className="text-slate-300" />}
@@ -727,41 +748,45 @@ const App: React.FC = () => {
         {view === AppView.Account && (
           <div className="max-w-5xl mx-auto py-12">
             {!currentUser ? (
-              <div className="max-w-md mx-auto bg-white p-12 rounded-[40px] shadow-2xl border border-slate-100 text-center space-y-8">
+              <div className="max-w-md mx-auto bg-white p-12 rounded-[40px] shadow-2xl border border-slate-100 text-center space-y-8 animate-in zoom-in duration-300">
                 <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Área de <span className={themeClasses.text}>Docentes</span></h2>
                 <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4 text-left">
-                  {isRegistering && <input required type="text" value={registerName} onChange={e => setRegisterName(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" placeholder="Tu nombre" />}
-                  <input required type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" placeholder="Email" />
-                  <input required type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" placeholder="Contraseña" />
+                  {isRegistering && <input required type="text" value={registerName} onChange={e => setRegisterName(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all" placeholder="Tu nombre" />}
+                  <input required type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all" placeholder="Email" />
+                  <input required type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all" placeholder="Contraseña" />
                   {authError && <p className="text-red-500 text-[10px] font-black uppercase ml-4">{authError}</p>}
-                  <button type="submit" className={`${themeClasses.bg} w-full py-5 rounded-2xl text-white font-black uppercase text-xs shadow-xl tracking-widest`}>{isRegistering ? 'Registrarse' : 'Acceder'}</button>
+                  <button type="submit" className={`${themeClasses.bg} w-full py-5 rounded-2xl text-white font-black uppercase text-xs shadow-xl tracking-widest hover:scale-105 active:scale-95 transition-all`}>{isRegistering ? 'Registrarse' : 'Acceder'}</button>
                 </form>
-                <button onClick={() => { setIsRegistering(!isRegistering); setAuthError(null); }} className="text-[10px] font-black uppercase text-slate-400 hover:text-indigo-600 transition-colors">{isRegistering ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}</button>
+                <button onClick={() => { setIsRegistering(!isRegistering); setAuthError(null); }} className="text-[10px] font-black uppercase text-slate-400 hover:text-indigo-600 transition-colors">{isRegistering ? '¿Ya tienes cuenta? Accede' : '¿No tienes cuenta? Regístrate'}</button>
               </div>
             ) : (
-              <div className="space-y-8">
+              <div className="space-y-8 animate-in fade-in duration-500">
                 <div className="bg-white p-8 md:p-12 rounded-[48px] shadow-sm border border-slate-100 flex items-center gap-8">
                   <img src={currentUser.avatar} className="w-32 h-32 rounded-full border-4 border-white shadow-xl" />
                   <div className="flex-1">
                     <h2 className="text-3xl font-black text-slate-900">{currentUser.name}</h2>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{currentUser.email}</p>
                   </div>
-                  <button onClick={() => { setCurrentUser(null); localStorage.removeItem('nogalespt_current_user'); navigateTo(AppView.Home); }} className="p-5 bg-red-50 text-red-500 rounded-3xl hover:bg-red-500 hover:text-white transition-all"><LogOut size={24} /></button>
+                  <button onClick={() => { setCurrentUser(null); localStorage.removeItem('nogalespt_current_user'); navigateTo(AppView.Home); }} className="p-5 bg-red-50 text-red-500 rounded-3xl hover:bg-red-500 hover:text-white transition-all shadow-sm hover:shadow-md"><LogOut size={24} /></button>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-2 bg-white p-12 rounded-[48px] border border-slate-100 shadow-sm">
-                    <h3 className="text-xs font-black uppercase text-slate-400 mb-8 tracking-widest flex items-center gap-2"><UserCircle size={18} className={themeClasses.text}/> Perfil</h3>
+                    <h3 className="text-xs font-black uppercase text-slate-400 mb-8 tracking-widest flex items-center gap-2"><UserCircle size={18} className={themeClasses.text}/> Configuración de Perfil</h3>
                     <form onSubmit={handleUpdateProfile} className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="text" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" /><input type="text" value={profileForm.lastName} onChange={e => setProfileForm({...profileForm, lastName: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" /></div>
-                      <textarea value={profileForm.bio} onChange={e => setProfileForm({...profileForm, bio: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold h-32" />
-                      <button type="submit" className={`${themeClasses.bg} w-full py-5 rounded-3xl text-white font-black uppercase text-xs tracking-widest shadow-xl`}><Save size={18} className="inline mr-2"/> Guardar</button>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold focus:ring-2 focus:ring-indigo-100 outline-none" placeholder="Nombre" />
+                        <input type="text" value={profileForm.lastName} onChange={e => setProfileForm({...profileForm, lastName: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold focus:ring-2 focus:ring-indigo-100 outline-none" placeholder="Apellidos" />
+                      </div>
+                      <textarea value={profileForm.bio} onChange={e => setProfileForm({...profileForm, bio: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold h-32 focus:ring-2 focus:ring-indigo-100 outline-none resize-none" placeholder="Breve biografía..." />
+                      <button type="submit" className={`${themeClasses.bg} w-full py-5 rounded-3xl text-white font-black uppercase text-xs tracking-widest shadow-xl hover:shadow-2xl transition-all flex items-center justify-center gap-2`}><Save size={18}/> Guardar Cambios</button>
                     </form>
                   </div>
                   <div className="bg-white p-12 rounded-[48px] border border-slate-100 shadow-sm space-y-8">
-                    <h3 className="text-xs font-black uppercase text-slate-400 mb-4 tracking-widest"><Share2 size={18} className={themeClasses.text}/> Redes</h3>
+                    <h3 className="text-xs font-black uppercase text-slate-400 mb-4 tracking-widest flex items-center gap-2"><Share2 size={18} className={themeClasses.text}/> Presencia Social</h3>
                     <div className="space-y-5">
-                      <div className="relative"><Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.instagram} onChange={e => setProfileForm({...profileForm, instagram: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm" placeholder="Instagram" /></div>
-                      <div className="relative"><Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.website} onChange={e => setProfileForm({...profileForm, website: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm" placeholder="Web" /></div>
+                      <div className="relative"><Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.instagram} onChange={e => setProfileForm({...profileForm, instagram: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm outline-none focus:ring-2 focus:ring-pink-100" placeholder="Instagram (sin @)" /></div>
+                      <div className="relative"><Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.website} onChange={e => setProfileForm({...profileForm, website: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-100" placeholder="Web / Portfolio" /></div>
+                      <div className="relative"><Linkedin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.linkedin} onChange={e => setProfileForm({...profileForm, linkedin: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm outline-none focus:ring-2 focus:ring-blue-100" placeholder="LinkedIn" /></div>
                     </div>
                   </div>
                 </div>
@@ -771,56 +796,68 @@ const App: React.FC = () => {
         )}
 
         {view === AppView.Upload && currentUser && (
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-8 duration-500">
             <div className="bg-white rounded-[40px] shadow-sm border border-slate-200 p-8 md:p-12">
-              <h2 className="text-3xl font-black text-slate-900 uppercase text-center mb-10">{editingResourceId ? 'Editar' : 'Crear'} <span className={themeClasses.text}>Contenido</span></h2>
+              <h2 className="text-3xl font-black text-slate-900 uppercase text-center mb-10">{editingResourceId ? 'Editar' : 'Crear'} <span className={themeClasses.text}>Contenido Docente</span></h2>
               <form onSubmit={handleUpload} className="space-y-10">
                 <div className="flex bg-slate-100 p-1.5 rounded-2xl w-fit mx-auto">
-                  <button type="button" onClick={() => setFormData({...formData, kind: 'material'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${formData.kind === 'material' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400'}`}>Material</button>
-                  <button type="button" onClick={() => setFormData({...formData, kind: 'blog'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${formData.kind === 'blog' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400'}`}>Artículo de Blog</button>
+                  <button type="button" onClick={() => setFormData({...formData, kind: 'material'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${formData.kind === 'material' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Material Didáctico</button>
+                  <button type="button" onClick={() => setFormData({...formData, kind: 'blog'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${formData.kind === 'blog' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Artículo de Blog</button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
-                    <input required type="text" placeholder="Título impactante..." className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
+                    <input required type="text" placeholder="Escribe un título impactante..." className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Cuerpo del {formData.kind === 'blog' ? 'Artículo' : 'Material'}</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Contenido principal ({formData.kind === 'blog' ? 'Cuerpo del post' : 'Descripción'})</label>
                       <RichTextEditor value={formData.summary} onChange={(val) => setFormData({...formData, summary: val})} />
                     </div>
                   </div>
                   <div className="space-y-6">
                     {formData.kind === 'material' ? (
                       <>
-                        <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.level} onChange={e => setFormData({...formData, level: e.target.value as EducationalLevel, courses: []})}>{Object.keys(SUBJECTS_BY_LEVEL).map(l => <option key={l} value={l}>{l}</option>)}</select>
-                        <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})}>{SUBJECTS_BY_LEVEL[formData.level]?.map(s => <option key={s} value={s}>{s}</option>)}</select>
-                        <div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-2xl">{COURSES_BY_LEVEL[formData.level]?.map(course => (<button key={course} type="button" onClick={() => handleCourseToggle(course)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${formData.courses.includes(course) ? `${themeClasses.bg} border-transparent text-white shadow-md` : 'bg-white border-slate-100 text-slate-400'}`}>{course}</button>))}</div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nivel Educativo</label>
+                          <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none cursor-pointer" value={formData.level} onChange={e => setFormData({...formData, level: e.target.value as EducationalLevel, courses: []})}>{Object.keys(SUBJECTS_BY_LEVEL).map(l => <option key={l} value={l}>{l}</option>)}</select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Materia / Área</label>
+                          <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none cursor-pointer" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})}>{SUBJECTS_BY_LEVEL[formData.level]?.map(s => <option key={s} value={s}>{s}</option>)}</select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Cursos Relacionados</label>
+                          <div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-2xl border border-slate-100">{COURSES_BY_LEVEL[formData.level]?.map(course => (<button key={course} type="button" onClick={() => handleCourseToggle(course)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${formData.courses.includes(course) ? `${themeClasses.bg} border-transparent text-white shadow-md` : 'bg-white border-slate-100 text-slate-400 hover:border-indigo-200'}`}>{course}</button>))}</div>
+                        </div>
                       </>
                     ) : (
                       <div className="space-y-4">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Categoría del Blog</label>
-                        <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})}>
+                        <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none cursor-pointer" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})}>
                           {BLOG_CATEGORIES.filter(c => c !== 'Todo').map(cat => <option key={cat} value={cat}>{cat}</option>)}
                         </select>
+                        <div className="p-6 bg-indigo-50 rounded-3xl border border-indigo-100">
+                          <p className="text-[11px] font-bold text-indigo-700 leading-relaxed"><Info size={14} className="inline mr-1 mb-0.5" /> Los artículos del blog se centran en estrategias pedagógicas y reflexión docente, diferenciándose de los materiales descargables.</p>
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
 
                 {formData.kind === 'material' && (
-                  <div className="bg-slate-900 rounded-[32px] p-8 space-y-8">
+                  <div className="bg-slate-900 rounded-[32px] p-8 space-y-8 animate-in zoom-in duration-300">
                     <div className="flex gap-4">
-                      <button type="button" onClick={() => setFormData({...formData, uploadMethod: 'file'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'file' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400'}`}>Enlace</button>
-                      <button type="button" onClick={() => setFormData({...formData, uploadMethod: 'code'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'code' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400'}`}>HTML</button>
+                      <button type="button" onClick={() => setFormData({...formData, uploadMethod: 'file'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'file' ? 'bg-white text-slate-900 shadow-lg' : 'bg-slate-800 text-slate-400 hover:text-slate-200'}`}>Enlace Externo</button>
+                      <button type="button" onClick={() => setFormData({...formData, uploadMethod: 'code'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'code' ? 'bg-white text-slate-900 shadow-lg' : 'bg-slate-800 text-slate-400 hover:text-slate-200'}`}>Interactivo HTML</button>
                     </div>
                     {formData.uploadMethod === 'file' ? (
-                      <input type="url" placeholder="URL del recurso (Drive, PDF, etc)..." className="w-full p-6 rounded-2xl bg-slate-800 border-none text-white font-bold" value={formData.externalUrl} onChange={e => setFormData({...formData, externalUrl: e.target.value})} />
+                      <input type="url" placeholder="Pega la URL del recurso (Google Drive, PDF, Genially, etc)..." className="w-full p-6 rounded-2xl bg-slate-800 border-none text-white font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all" value={formData.externalUrl} onChange={e => setFormData({...formData, externalUrl: e.target.value})} />
                     ) : (
-                      <textarea placeholder="Código interactivo..." className="w-full p-6 rounded-2xl bg-slate-800 border-none font-mono text-sm text-indigo-300 h-48" value={formData.pastedCode} onChange={e => setFormData({...formData, pastedCode: e.target.value})} />
+                      <textarea placeholder="Pega aquí el código HTML para embeber tu material interactivo..." className="w-full p-6 rounded-2xl bg-slate-800 border-none font-mono text-sm text-indigo-300 h-48 outline-none focus:ring-2 focus:ring-indigo-500 transition-all" value={formData.pastedCode} onChange={e => setFormData({...formData, pastedCode: e.target.value})} />
                     )}
                   </div>
                 )}
                 
-                <button type="submit" disabled={isUploading} className={`${themeClasses.bg} w-full py-6 rounded-[28px] text-white font-black uppercase text-sm shadow-2xl`}>
+                <button type="submit" disabled={isUploading} className={`${themeClasses.bg} w-full py-6 rounded-[28px] text-white font-black uppercase text-sm shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50`}>
                   {isUploading ? <Loader2 className="animate-spin inline mr-2" /> : <CheckCircle2 className="inline mr-2" />} 
                   {editingResourceId ? 'Actualizar' : 'Publicar'} {formData.kind === 'blog' ? 'Artículo' : 'Material'}
                 </button>
@@ -832,47 +869,47 @@ const App: React.FC = () => {
         {view === AppView.Detail && selectedResource && (
           <div className="animate-in fade-in duration-300 space-y-8">
             <div className="flex items-center justify-between gap-4">
-              <button onClick={() => navigateTo(selectedResource.kind === 'blog' ? AppView.Blog : AppView.Explore)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900">
+              <button onClick={() => navigateTo(selectedResource.kind === 'blog' ? AppView.Blog : AppView.Explore)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900 transition-colors">
                 <ArrowLeft size={18}/> Volver al {selectedResource.kind === 'blog' ? 'Blog' : 'Repositorio'}
               </button>
               <div className="flex items-center gap-3">
                 {currentUser?.email === selectedResource.email && (
                   <>
-                    <button onClick={() => handleEditResource(selectedResource)} className="px-6 py-3 bg-white text-indigo-600 border border-indigo-200 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2"><Edit3 size={14} /> Editar</button>
-                    <button onClick={() => handleDeleteResource(selectedResource.id)} className="px-6 py-3 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2"><Trash2 size={14} /> Eliminar</button>
+                    <button onClick={() => handleEditResource(selectedResource)} className="px-6 py-3 bg-white text-indigo-600 border border-indigo-200 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2 hover:bg-indigo-50 transition-colors"><Edit3 size={14} /> Editar</button>
+                    <button onClick={() => handleDeleteResource(selectedResource.id)} className="px-6 py-3 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} /> Eliminar</button>
                   </>
                 )}
-                <button onClick={() => copyToClipboard(window.location.href)} className="px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-2xl font-black text-[10px] uppercase shadow-sm">Compartir</button>
+                <button onClick={() => copyToClipboard(window.location.href)} className="px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-2xl font-black text-[10px] uppercase shadow-sm hover:bg-slate-50 transition-colors">Compartir</button>
               </div>
             </div>
 
             {selectedResource.kind === 'blog' ? (
               /* VISTA DE LECTURA PRO PARA EL BLOG */
-              <article className="max-w-[850px] mx-auto bg-white rounded-[48px] shadow-sm border border-slate-100 overflow-hidden">
-                <div className="h-96 w-full relative">
+              <article className="max-w-[850px] mx-auto bg-white rounded-[48px] shadow-sm border border-slate-100 overflow-hidden animate-in slide-in-from-bottom-8 duration-700">
+                <div className="h-[450px] w-full relative">
                   <img src={selectedResource.thumbnail} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-12">
-                    <div className="space-y-4">
-                      <span className="bg-indigo-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase">{selectedResource.subject}</span>
-                      <h1 className="text-4xl md:text-5xl font-black text-white leading-tight">{selectedResource.title}</h1>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-12 md:p-20">
+                    <div className="space-y-6">
+                      <span className="bg-indigo-600 text-white px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg">{selectedResource.subject}</span>
+                      <h1 className="text-4xl md:text-6xl font-black text-white leading-[1.1] tracking-tighter">{selectedResource.title}</h1>
                     </div>
                   </div>
                 </div>
                 
                 <div className="p-12 md:p-20">
-                  <div className="flex items-center gap-4 mb-12 pb-12 border-b border-slate-50">
-                    <img src={users.find(u => u.email === selectedResource.email)?.avatar || `https://ui-avatars.com/api/?name=${selectedResource.authorName}`} className="w-14 h-14 rounded-2xl shadow-md object-cover" />
-                    <div>
+                  <div className="flex items-center gap-4 mb-16 pb-12 border-b border-slate-50">
+                    <img src={users.find(u => u.email === selectedResource.email)?.avatar || `https://ui-avatars.com/api/?name=${selectedResource.authorName}`} className="w-16 h-16 rounded-[22px] shadow-xl object-cover border-4 border-white" />
+                    <div className="space-y-1">
                       <h4 className="font-black text-slate-900 uppercase text-xs tracking-tight">{selectedResource.authorName}</h4>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{selectedResource.uploadDate}</p>
                     </div>
                   </div>
                   
-                  <div className="text-slate-700 leading-relaxed text-lg prose prose-indigo max-w-none prose-img:rounded-3xl prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter prose-blockquote:border-indigo-600 prose-blockquote:bg-indigo-50 prose-blockquote:p-6 prose-blockquote:rounded-2xl" dangerouslySetInnerHTML={{ __html: renderContentWithVideos(selectedResource.summary) }} />
+                  <div className="text-slate-700 leading-[1.8] text-xl prose prose-indigo max-w-none prose-img:rounded-[32px] prose-img:shadow-2xl prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter prose-headings:text-slate-900 prose-blockquote:border-indigo-600 prose-blockquote:bg-indigo-50/50 prose-blockquote:p-8 prose-blockquote:rounded-3xl prose-blockquote:not-italic prose-blockquote:font-bold prose-blockquote:text-indigo-900 prose-li:font-medium" dangerouslySetInnerHTML={{ __html: renderContentWithVideos(selectedResource.summary) }} />
                   
-                  <div className="mt-20 pt-12 border-t border-slate-50 flex flex-col items-center gap-6">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">¿Te ha sido útil este artículo?</p>
-                    <div className="flex justify-center gap-3">
+                  <div className="mt-24 pt-16 border-t border-slate-50 flex flex-col items-center gap-8 bg-slate-50/50 rounded-[40px] p-12">
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Valora este conocimiento</p>
+                    <div className="flex justify-center gap-4">
                       {[1, 2, 3, 4, 5].map(v => (
                         <button key={v} onClick={async () => {
                           const resToRate = resources.find(r => r.id === selectedResource.id);
@@ -884,11 +921,12 @@ const App: React.FC = () => {
                           setResources(prev => prev.map(r => r.id === selectedResource.id ? updatedResource : r));
                           setSelectedResource(updatedResource);
                           await dbService.saveResource(updatedResource);
-                        }} className="text-slate-100 hover:text-amber-500 transition-colors">
-                          <Star size={32} fill={v <= Math.round(selectedResource.rating) ? 'currentColor' : 'none'} className={v <= Math.round(selectedResource.rating) ? 'text-amber-500' : 'text-slate-200'} />
+                        }} className="text-slate-200 hover:text-amber-500 transition-all hover:scale-125 transform">
+                          <Star size={48} fill={v <= Math.round(selectedResource.rating) ? 'currentColor' : 'none'} className={v <= Math.round(selectedResource.rating) ? 'text-amber-500 drop-shadow-lg' : 'text-slate-200'} />
                         </button>
                       ))}
                     </div>
+                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">({selectedResource.rating} / 5 basado en su impacto pedagógico)</p>
                   </div>
                 </div>
               </article>
@@ -906,24 +944,24 @@ const App: React.FC = () => {
                   </div>
 
                   {(selectedResource.pastedCode || (selectedResource.contentUrl && selectedResource.contentUrl.trim() !== '')) && (
-                    <div ref={resourceContainerRef} className="aspect-video bg-slate-900 rounded-[40px] shadow-2xl overflow-hidden relative">
+                    <div ref={resourceContainerRef} className="aspect-video bg-slate-900 rounded-[40px] shadow-2xl overflow-hidden relative border-4 border-white ring-1 ring-slate-200">
                       <iframe 
                         src={selectedResource.pastedCode ? '' : selectedResource.contentUrl} 
                         srcDoc={selectedResource.pastedCode} 
                         className="w-full h-full border-none bg-white" 
                         title={selectedResource.title} 
                       />
-                      <button onClick={handleMaximize} className="absolute bottom-8 right-8 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:scale-105 transition-all">
+                      <button onClick={handleMaximize} className="absolute bottom-8 right-8 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl hover:scale-110 transition-all text-slate-900 active:scale-95">
                         <Maximize2 size={24} />
                       </button>
                     </div>
                   )}
                 </div>
                 <div className="space-y-8">
-                  <div className="bg-white p-10 rounded-[48px] shadow-sm border border-slate-100 text-center space-y-8">
+                  <div className="bg-white p-10 rounded-[48px] shadow-sm border border-slate-100 text-center space-y-8 sticky top-24">
                     <div className="cursor-pointer group" onClick={() => { setViewingUserEmail(selectedResource.email); navigateTo(AppView.Profile, { user: selectedResource.email }); }}>
-                      <img src={users.find(u => u.email === selectedResource.email)?.avatar || `https://ui-avatars.com/api/?name=${selectedResource.authorName}`} className="w-28 h-28 rounded-[36px] mx-auto shadow-xl object-cover" />
-                      <h3 className="font-black text-slate-900 text-xl mt-6">{selectedResource.authorName}</h3>
+                      <img src={users.find(u => u.email === selectedResource.email)?.avatar || `https://ui-avatars.com/api/?name=${selectedResource.authorName}`} className="w-28 h-28 rounded-[36px] mx-auto shadow-xl object-cover border-4 border-slate-50 group-hover:scale-105 transition-transform" />
+                      <h3 className="font-black text-slate-900 text-xl mt-6 group-hover:text-indigo-600 transition-colors">{selectedResource.authorName}</h3>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Autoría verificada</p>
                     </div>
                     <div className="flex flex-col gap-4 border-t border-slate-50 pt-8">
@@ -939,14 +977,14 @@ const App: React.FC = () => {
                             setResources(prev => prev.map(r => r.id === selectedResource.id ? updatedResource : r));
                             setSelectedResource(updatedResource);
                             await dbService.saveResource(updatedResource);
-                          }} className="text-slate-100 hover:text-amber-500">
+                          }} className="text-slate-100 hover:text-amber-500 transition-colors">
                             <Star size={28} fill={v <= Math.round(selectedResource.rating) ? 'currentColor' : 'none'} className={v <= Math.round(selectedResource.rating) ? 'text-amber-500' : 'text-slate-200'} />
                           </button>
                         ))}
                       </div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Valora el material</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Valora el material</p>
                     </div>
-                    <a href={selectedResource.contentUrl} target="_blank" rel="noopener noreferrer" className="block w-full py-5 bg-slate-900 text-white rounded-[24px] font-black uppercase text-[10px] tracking-widest shadow-xl">Original Externo</a>
+                    <a href={selectedResource.contentUrl} target="_blank" rel="noopener noreferrer" className="block w-full py-5 bg-slate-900 text-white rounded-[24px] font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition-colors active:scale-95">Ver Original Externo</a>
                   </div>
                 </div>
               </div>
@@ -960,7 +998,7 @@ const App: React.FC = () => {
           <GraduationCap size={32} className={themeClasses.text} />
           <span className="text-2xl font-black uppercase tracking-tighter">NOGALES<span className={themeClasses.text}>PT</span></span>
         </div>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.4em]">© 2025 • Blog y Repositorio Docente Colaborativo</p>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.4em]">© 2025 • Blog y Repositorio Docente Colaborativo para Andalucía</p>
       </footer>
     </div>
   );
