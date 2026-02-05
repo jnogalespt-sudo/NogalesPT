@@ -8,14 +8,29 @@ import {
   Focus, FileCode, Maximize, Trophy, Medal, Users, TrendingUp,
   Loader2, AlertCircle, Monitor, CheckCircle2, Instagram, Linkedin, 
   Share2, Camera, LogOut, Mail, Link as LinkIcon, RefreshCw, Image as ImageIcon, Music, Lock, EyeOff, Minimize,
-  Twitter, AtSign, Send, MessageCircle, Trash2, Edit3, ShieldAlert, KeyRound, Zap,
+  Twitter, AtSign, Send, MessageCircle, Trash2, Edit3, ShieldAlert, KeyRound,
   Layers3, Maximize2, Inbox, Copy, Check, LogIn, Type, List, ListOrdered, Bold, Italic, Heading1, Heading2,
   Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify, Quote, Table as TableIcon, 
-  Eraser, Hash, Type as TypeIcon, Palette, Indent, Outdent, Minus, Smile
+  Eraser, Hash, Type as TypeIcon, Palette, Indent, Outdent, Minus, Smile, Newspaper
 } from 'lucide-react';
 import { AppView, Resource, User as UserType, EducationalLevel, MainCategory, PrivateMessage } from './types';
 import { SUBJECTS_BY_LEVEL, COURSES_BY_LEVEL } from './constants';
 import { dbService } from './services/dbService';
+
+// --- CONSTANTES DEL BLOG ---
+const BLOG_CATEGORIES = [
+  'Todo', 
+  'Dislexia', 
+  'Autismo (TEA)', 
+  'TEL', 
+  'TDAH', 
+  'Desarrollo Comunicativo-lingüítico', 
+  'Desarrollo Cognitivo', 
+  'Desarrollo Social', 
+  'DUA', 
+  'Pedagogía Terapéutica (PT)', 
+  'Audición y Lenguaje (AL)'
+];
 
 // --- UTILIDADES ---
 const stripHtml = (html: string) => {
@@ -25,14 +40,9 @@ const stripHtml = (html: string) => {
   return tmp.textContent || tmp.innerText || "";
 };
 
-/**
- * Detecta enlaces de YouTube y los convierte en iFrames responsivos
- */
 const renderContentWithVideos = (content: string) => {
   if (!content) return "";
-  
   const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})(?:[^\s<]*)/g;
-  
   return content.replace(youtubeRegex, (match, videoId) => {
     return `
       <div class="my-8 aspect-video w-full rounded-[32px] overflow-hidden shadow-2xl bg-slate-900 border-4 border-white">
@@ -50,11 +60,6 @@ const renderContentWithVideos = (content: string) => {
   });
 };
 
-// --- COMPONENTES AUXILIARES ---
-
-/**
- * RichTextEditor Profesional con corrección de botones y selectores de fuente/color/tamaño
- */
 const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: string) => void }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const colorInputRef = useRef<HTMLInputElement>(null);
@@ -93,7 +98,6 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
 
   return (
     <div className="w-full flex flex-col border border-slate-300 rounded-[12px] bg-[#fdfdfd] shadow-sm overflow-hidden focus-within:ring-1 focus-within:ring-indigo-200 transition-all">
-      {/* TOOLBAR PROFESIONAL - NIVEL 1 */}
       <div className="bg-[#f0f2f5] border-b border-slate-300 p-1.5 flex flex-wrap items-center gap-1">
         <div className="flex gap-0.5 pr-1 border-r border-slate-400">
           <ToolbarButton onClick={() => exec('bold')} icon={Bold} title="Negrita" />
@@ -123,7 +127,6 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
           <ToolbarButton onClick={() => {const url = prompt('Imagen URL:'); if(url) exec('insertImage', url)}} icon={ImageIcon} title="Imagen" />
           <ToolbarButton onClick={handleTable} icon={TableIcon} title="Tabla" />
           <ToolbarButton onClick={() => exec('insertHorizontalRule')} icon={Minus} title="Línea horizontal" />
-          {/* CORRECCIÓN: Se añade type="button" para evitar el guardado automático al hacer clic */}
           <button 
             type="button" 
             onClick={() => colorInputRef.current?.click()}
@@ -132,37 +135,20 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
           >
             <Palette size={15} strokeWidth={2.5} />
             <div className="w-full h-0.5 bg-indigo-600 mt-0.5 rounded-full" />
-            <input 
-              ref={colorInputRef}
-              type="color" 
-              className="hidden" 
-              onChange={(e) => exec('foreColor', e.target.value)} 
-            />
+            <input ref={colorInputRef} type="color" className="hidden" onChange={(e) => exec('foreColor', e.target.value)} />
           </button>
         </div>
       </div>
 
-      {/* TOOLBAR - NIVEL 2 (SELECTORES) */}
       <div className="bg-[#f0f2f5] border-b border-slate-300 p-1.5 flex flex-wrap items-center gap-3">
-        {/* Formato de bloque */}
-        <select 
-          className="bg-white border border-slate-300 rounded text-[11px] px-2 py-1 outline-none font-medium h-7"
-          onChange={(e) => exec('formatBlock', e.target.value)}
-          defaultValue="p"
-        >
+        <select className="bg-white border border-slate-300 rounded text-[11px] px-2 py-1 outline-none font-medium h-7" onChange={(e) => exec('formatBlock', e.target.value)} defaultValue="p">
           <option value="p">Formato (Párrafo)</option>
           <option value="h1">Título 1</option>
           <option value="h2">Título 2</option>
           <option value="h3">Título 3</option>
           <option value="pre">Código fuente</option>
         </select>
-
-        {/* Fuente */}
-        <select 
-          className="bg-white border border-slate-300 rounded text-[11px] px-2 py-1 outline-none font-medium h-7"
-          onChange={(e) => exec('fontName', e.target.value)}
-          defaultValue="Inherit"
-        >
+        <select className="bg-white border border-slate-300 rounded text-[11px] px-2 py-1 outline-none font-medium h-7" onChange={(e) => exec('fontName', e.target.value)} defaultValue="Inherit">
           <option value="">Fuente (Predeterminada)</option>
           <option value="Arial">Arial</option>
           <option value="Comic Sans MS">Comic Sans</option>
@@ -173,13 +159,7 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
           <option value="Times New Roman">Times New Roman</option>
           <option value="Verdana">Verdana</option>
         </select>
-
-        {/* Tamaño */}
-        <select 
-          className="bg-white border border-slate-300 rounded text-[11px] px-2 py-1 outline-none font-medium h-7"
-          onChange={(e) => exec('fontSize', e.target.value)}
-          defaultValue="3"
-        >
+        <select className="bg-white border border-slate-300 rounded text-[11px] px-2 py-1 outline-none font-medium h-7" onChange={(e) => exec('fontSize', e.target.value)} defaultValue="3">
           <option value="1">Tamaño (1 - Mini)</option>
           <option value="2">2 - Pequeño</option>
           <option value="3">3 - Normal</option>
@@ -190,15 +170,7 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
         </select>
       </div>
 
-      {/* AREA DE ESCRITURA */}
-      <div 
-        ref={editorRef}
-        contentEditable 
-        onInput={(e) => onChange(e.currentTarget.innerHTML)}
-        className="p-8 min-h-[300px] outline-none prose prose-slate max-w-none text-slate-800 font-medium bg-white selection:bg-indigo-100"
-      />
-      
-      {/* ESTATUS BAR */}
+      <div ref={editorRef} contentEditable onInput={(e) => onChange(e.currentTarget.innerHTML)} className="p-8 min-h-[300px] outline-none prose prose-slate max-w-none text-slate-800 font-medium bg-white selection:bg-indigo-100" />
       <div className="bg-slate-50 border-t border-slate-200 px-4 py-1 flex justify-end">
         <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Editor Nogales PRO v2.1</span>
       </div>
@@ -235,6 +207,7 @@ const App: React.FC = () => {
 
   const [view, setView] = useState<AppView>(AppView.Home);
   const [activeCategory, setActiveCategory] = useState<MainCategory>('PT-AL');
+  const [activeBlogCategory, setActiveBlogCategory] = useState<string>('Todo');
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLevel, setFilterLevel] = useState<string>('Todos');
@@ -257,7 +230,7 @@ const App: React.FC = () => {
     title: '', summary: '', level: 'Infantil' as EducationalLevel, subject: 'Crecimiento en Armonía',
     courses: [] as string[], resourceType: 'Material Didáctico', 
     mainCategory: 'PT-AL' as MainCategory, uploadMethod: 'file' as 'file' | 'code',
-    externalUrl: '', pastedCode: ''
+    externalUrl: '', pastedCode: '', kind: 'material' as 'material' | 'blog'
   });
 
   const [profileForm, setProfileForm] = useState<UserType>({
@@ -272,7 +245,7 @@ const App: React.FC = () => {
 
   const navigateTo = (newView: AppView, params: Record<string, string> = {}) => {
     if (newView === AppView.Upload && !currentUser) {
-      setAuthError("Debes registrarte para compartir recursos.");
+      setAuthError("Debes registrarte para compartir contenido.");
       setView(AppView.Account);
       return;
     }
@@ -285,13 +258,13 @@ const App: React.FC = () => {
       searchParams.set('view', newView);
       if (params.id) searchParams.set('id', params.id);
       if (params.user) searchParams.set('user', params.user);
-      searchParams.set('category', activeCategory);
+      if (params.category) searchParams.set('category', params.category);
       window.history.pushState({}, '', `?${searchParams.toString()}`);
     } catch (e) {
-      console.warn("Navegación URL limitada por restricciones de seguridad del entorno.");
+      console.warn("Navegación URL limitada.");
     }
 
-    if (newView !== AppView.Upload && newView !== AppView.Profile && newView !== AppView.Detail) {
+    if (![AppView.Upload, AppView.Profile, AppView.Detail].includes(newView)) {
       resetForm();
     }
   };
@@ -302,44 +275,30 @@ const App: React.FC = () => {
       : { bg: 'bg-indigo-600', text: 'text-indigo-600', softBg: 'bg-indigo-50', softText: 'text-indigo-700' };
   }, [activeCategory]);
 
-  const activeProfile = useMemo(() => {
-    return users.find(u => u.email === viewingUserEmail);
-  }, [users, viewingUserEmail]);
-
-  const profileResources = useMemo(() => {
-    return resources.filter(r => r.email === viewingUserEmail);
-  }, [resources, viewingUserEmail]);
+  const activeProfile = useMemo(() => users.find(u => u.email === viewingUserEmail), [users, viewingUserEmail]);
+  const profileResources = useMemo(() => resources.filter(r => r.email === viewingUserEmail), [resources, viewingUserEmail]);
 
   useEffect(() => {
     let title = "Repositorio Colaborativo para Docentes | NOGALESPT";
-    let description = "Materiales de calidad, interactivos y adaptados para maestros de PT y AL en Andalucía. El mayor repositorio colaborativo para docentes.";
+    let description = "Materiales de calidad, interactivos y adaptados para maestros de PT y AL en Andalucía.";
 
     if (view === AppView.Detail && selectedResource) {
-      title = `${selectedResource.title} | NOGALESPT`;
+      title = `${selectedResource.title} | ${selectedResource.kind === 'blog' ? 'Blog' : 'Material'} NOGALESPT`;
       description = stripHtml(selectedResource.summary).substring(0, 160) + "...";
-    } else if (view === AppView.Explore) {
-      title = `Explorar Recursos de ${activeCategory} | NOGALESPT`;
-      description = `Busca y filtra entre cientos de materiales de ${activeCategory} adaptados por la comunidad docente.`;
-    } else if (view === AppView.Profile && activeProfile) {
-      title = `Perfil de ${activeProfile.name} ${activeProfile.lastName || ''} | NOGALESPT`;
-      if (activeProfile.bio) {
-        description = stripHtml(activeProfile.bio).substring(0, 160) + "...";
+    } else if (view === AppView.Blog) {
+      if (activeBlogCategory === 'Todo') {
+        title = "Blog Educativo: Estrategias y Recursos de PT y AL | NOGALESPT";
+        description = "Explora nuestro blog educativo con las mejores estrategias y recursos especializados en PT y AL para docentes.";
+      } else {
+        title = `Artículos y Estrategias sobre ${activeBlogCategory} | NOGALESPT`;
+        description = `Descubre artículos, estrategias y recursos especializados sobre ${activeBlogCategory} en el blog de NOGALESPT para maestros y profesionales.`;
       }
-    } else if (view === AppView.TopDocentes) {
-      title = "Muro de Excelencia: Mejores Docentes | NOGALESPT";
-      description = "Descubre a los maestros que más aportan a la comunidad educativa en nuestro ranking de excelencia.";
     }
 
     document.title = title;
     const metaDescription = document.querySelector('meta[name="description"]');
     if (metaDescription) metaDescription.setAttribute('content', description);
-    const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle) ogTitle.setAttribute('content', title);
-    const ogDesc = document.querySelector('meta[property="og:description"]');
-    if (ogDesc) ogDesc.setAttribute('content', description);
-    const ogUrl = document.querySelector('meta[property="og:url"]');
-    if (ogUrl) ogUrl.setAttribute('content', window.location.href);
-  }, [view, selectedResource, activeProfile, activeCategory]);
+  }, [view, selectedResource, activeBlogCategory]);
 
   const cleanGoogleDriveUrl = (url: string) => {
     if (url.includes('drive.google.com')) {
@@ -370,7 +329,6 @@ const App: React.FC = () => {
         const params = new URLSearchParams(window.location.search);
         const viewParam = params.get('view') as AppView;
         const idParam = params.get('id');
-        const userParam = params.get('user');
         const catParam = params.get('category') as MainCategory;
 
         if (catParam) setActiveCategory(catParam);
@@ -380,21 +338,10 @@ const App: React.FC = () => {
             const found = resData.find((r: Resource) => r.id === idParam);
             if (found) setSelectedResource(found);
           }
-          if (viewParam === AppView.Profile && userParam) {
-            setViewingUserEmail(userParam);
-          }
         }
       } catch (error) { console.error("Error cargando app:", error); } finally { setIsLoading(false); }
     };
     initApp();
-
-    const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      const viewParam = params.get('view') as AppView;
-      if (viewParam) setView(viewParam);
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const copyToClipboard = (text: string) => {
@@ -423,20 +370,20 @@ const App: React.FC = () => {
       mainCategory: resource.mainCategory,
       uploadMethod: resource.pastedCode ? 'code' : 'file',
       externalUrl: resource.contentUrl || '',
-      pastedCode: resource.pastedCode || ''
+      pastedCode: resource.pastedCode || '',
+      kind: resource.kind || 'material'
     });
     navigateTo(AppView.Upload);
   };
 
   const handleDeleteResource = async (id: string) => {
-    if (!window.confirm("¿Estás seguro de que quieres eliminar este recurso definitivamente?")) return;
+    if (!window.confirm("¿Eliminar definitivamente?")) return;
     try {
       await dbService.deleteResource(id);
       setResources(prev => prev.filter(r => r.id !== id));
       setSelectedResource(null);
       navigateTo(AppView.Explore);
-      alert("Recurso eliminado correctamente");
-    } catch (err) { console.error(err); alert("Hubo un error"); }
+    } catch (err) { console.error(err); }
   };
 
   const teacherRankings = useMemo(() => {
@@ -469,20 +416,26 @@ const App: React.FC = () => {
 
   const filteredResources = useMemo(() => {
     return resources.filter(res => {
+      if (res.kind === 'blog') return false; // Excluir blog de la exploración normal
       const matchesCategory = res.mainCategory === activeCategory;
-      const lowerQuery = searchQuery.toLowerCase();
-      const matchesSearch = res.title.toLowerCase().includes(lowerQuery) || res.authorName.toLowerCase().includes(lowerQuery);
+      const matchesSearch = res.title.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesLevel = filterLevel === 'Todos' || res.level === filterLevel;
-      const matchesCourse = filterCourse === 'Todos' || res.courses.includes(filterCourse);
-      const matchesSubject = filterSubject === 'Todas' || res.subject === filterSubject;
-      return matchesCategory && matchesSearch && matchesLevel && matchesCourse && matchesSubject;
+      return matchesCategory && matchesSearch && matchesLevel;
     });
-  }, [resources, activeCategory, searchQuery, filterLevel, filterCourse, filterSubject]);
+  }, [resources, activeCategory, searchQuery, filterLevel]);
+
+  const filteredBlogPosts = useMemo(() => {
+    return resources.filter(res => {
+      if (res.kind !== 'blog') return false;
+      const matchesCategory = activeBlogCategory === 'Todo' || res.subject === activeBlogCategory;
+      const matchesSearch = res.title.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [resources, activeBlogCategory, searchQuery]);
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
-    if (formData.courses.length === 0) return alert("Selecciona un curso.");
     setIsUploading(true);
     try {
       const cleanUrl = formData.uploadMethod === 'file' ? cleanGoogleDriveUrl(formData.externalUrl) : undefined;
@@ -502,12 +455,13 @@ const App: React.FC = () => {
         uploadDate: new Date().toLocaleDateString(),
         thumbnail: `https://picsum.photos/seed/${Date.now()}/600/400`,
         contentUrl: cleanUrl || '',
-        pastedCode: formData.uploadMethod === 'code' ? formData.pastedCode : undefined
+        pastedCode: formData.uploadMethod === 'code' ? formData.pastedCode : undefined,
+        kind: formData.kind
       };
       await dbService.saveResource(newRes);
       setResources(prev => editingResourceId ? prev.map(r => r.id === editingResourceId ? newRes : r) : [newRes, ...prev]);
-      alert("Material guardado.");
-      navigateTo(AppView.Explore);
+      alert("Contenido guardado.");
+      navigateTo(formData.kind === 'blog' ? AppView.Blog : AppView.Explore);
     } catch (err) { console.error(err); } finally { setIsUploading(false); }
   };
 
@@ -553,7 +507,7 @@ const App: React.FC = () => {
     setFormData({
       title: '', summary: '', level: 'Infantil', 
       subject: 'Crecimiento en Armonía', courses: [], resourceType: 'Material Didáctico', 
-      mainCategory: activeCategory, uploadMethod: 'file', externalUrl: '', pastedCode: ''
+      mainCategory: activeCategory, uploadMethod: 'file', externalUrl: '', pastedCode: '', kind: 'material'
     });
   };
 
@@ -588,8 +542,8 @@ const App: React.FC = () => {
           </div>
           <div className="hidden md:flex items-center gap-6">
             <button onClick={() => navigateTo(AppView.Explore)} className="text-xs font-black uppercase text-slate-500">Explorar</button>
+            <button onClick={() => navigateTo(AppView.Blog)} className="text-xs font-black uppercase text-slate-500">Blog</button>
             <button onClick={() => navigateTo(AppView.TopDocentes)} className="text-xs font-black uppercase text-slate-500">Ranking</button>
-            <button onClick={() => window.open('/juegos/pro/index.html', '_blank')} className="text-xs font-black uppercase text-amber-500 border border-amber-200 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors flex items-center gap-2"><Zap size={14} fill="currentColor" /> Juegos PRO</button>
             <button onClick={() => navigateTo(AppView.Upload)} className={`${themeClasses.bg} text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2`}><Upload size={16} /> Subir</button>
             <button onClick={() => navigateTo(AppView.Account)} className="flex items-center gap-2 p-1.5 pr-4 rounded-full border bg-slate-100">{currentUser?.avatar ? <img src={currentUser.avatar} className="w-8 h-8 rounded-full object-cover" /> : <UserIcon size={18} />}<span className="text-[10px] font-black uppercase">{currentUser ? currentUser.name : 'Mi Cuenta'}</span></button>
           </div>
@@ -604,8 +558,8 @@ const App: React.FC = () => {
             <div className="p-6 flex justify-between items-center border-b"><span className="text-xl font-black uppercase tracking-tighter">MENÚ</span><button onClick={() => setIsMenuOpen(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={24} /></button></div>
             <div className="flex-1 p-6 space-y-6">
               <button onClick={() => navigateTo(AppView.Explore)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><LayoutGrid size={20} /> Explorar</button>
+              <button onClick={() => navigateTo(AppView.Blog)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><Newspaper size={20} /> Blog</button>
               <button onClick={() => navigateTo(AppView.TopDocentes)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><Trophy size={20} /> Ranking</button>
-              <button onClick={() => window.open('/juegos/pro/index.html', '_blank')} className="flex items-center gap-4 w-full text-left font-black uppercase text-amber-500 hover:text-amber-600"><Zap size={20} fill="currentColor" /> Juegos PRO</button>
               <button onClick={() => navigateTo(AppView.Upload)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><Upload size={20} /> Subir Material</button>
               <button onClick={() => navigateTo(AppView.Account)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><UserCircle size={20} /> Mi Cuenta</button>
             </div>
@@ -613,12 +567,14 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-white border-b border-slate-200 sticky top-16 z-[40]">
-        <div className="max-w-7xl mx-auto flex overflow-x-auto no-scrollbar">
-          <button onClick={() => { setActiveCategory('General'); navigateTo(AppView.Explore); }} className={`flex-1 min-w-[180px] py-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase border-b-2 ${activeCategory === 'General' ? 'text-emerald-600 border-emerald-600 bg-emerald-50' : 'text-slate-400 border-transparent'}`}><BookOpen size={16} /> General</button>
-          <button onClick={() => { setActiveCategory('PT-AL'); navigateTo(AppView.Explore); }} className={`flex-1 min-w-[180px] py-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase border-b-2 ${activeCategory === 'PT-AL' ? 'text-indigo-600 border-indigo-600 bg-indigo-50' : 'text-slate-400 border-transparent'}`}><BrainCircuit size={16} /> PT y AL</button>
+      {view !== AppView.Blog && (
+        <div className="bg-white border-b border-slate-200 sticky top-16 z-[40]">
+          <div className="max-w-7xl mx-auto flex overflow-x-auto no-scrollbar">
+            <button onClick={() => { setActiveCategory('General'); navigateTo(AppView.Explore); }} className={`flex-1 min-w-[180px] py-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase border-b-2 ${activeCategory === 'General' ? 'text-emerald-600 border-emerald-600 bg-emerald-50' : 'text-slate-400 border-transparent'}`}><BookOpen size={16} /> General</button>
+            <button onClick={() => { setActiveCategory('PT-AL'); navigateTo(AppView.Explore); }} className={`flex-1 min-w-[180px] py-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase border-b-2 ${activeCategory === 'PT-AL' ? 'text-indigo-600 border-indigo-600 bg-indigo-50' : 'text-slate-400 border-transparent'}`}><BrainCircuit size={16} /> PT y AL</button>
+          </div>
         </div>
-      </div>
+      )}
 
       <main className="flex-1 max-w-7xl mx-auto px-4 py-8 w-full">
         {view === AppView.Home && (
@@ -629,13 +585,65 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {view === AppView.Blog && (
+          <div className="space-y-12 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+              <div className="space-y-2">
+                <h2 className="text-4xl font-black text-slate-900 uppercase">Blog <span className="text-indigo-600">Educativo</span></h2>
+                <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Estrategias y reflexiones para el aula</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {BLOG_CATEGORIES.map(cat => (
+                  <button 
+                    key={cat} 
+                    onClick={() => setActiveBlogCategory(cat)}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase border-2 transition-all ${activeBlogCategory === cat ? 'bg-indigo-600 border-transparent text-white shadow-lg' : 'bg-white border-slate-100 text-slate-400 hover:border-indigo-200'}`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredBlogPosts.map(post => (
+                <div key={post.id} onClick={() => { setSelectedResource(post); navigateTo(AppView.Detail, { id: post.id }); }} className="bg-white rounded-[40px] border border-slate-200 overflow-hidden hover:shadow-2xl transition-all group cursor-pointer flex flex-col h-full shadow-sm">
+                  <div className="h-56 overflow-hidden relative">
+                    <img src={post.thumbnail} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute top-6 left-6 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl text-[9px] font-black uppercase text-indigo-600 shadow-sm">{post.subject}</div>
+                  </div>
+                  <div className="p-8 flex flex-col flex-grow space-y-4">
+                    <h3 className="font-black text-slate-800 text-xl leading-tight group-hover:text-indigo-600 transition-colors">{post.title}</h3>
+                    <p className="text-sm text-slate-500 font-medium line-clamp-3 leading-relaxed">{stripHtml(post.summary)}</p>
+                    <div className="pt-6 mt-auto border-t border-slate-50 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400">
+                          {post.authorName.charAt(0)}
+                        </div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{post.authorName}</span>
+                      </div>
+                      <span className="text-[10px] font-black text-slate-300 uppercase">{post.uploadDate}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {filteredBlogPosts.length === 0 && (
+                <div className="col-span-full py-24 text-center border-2 border-dashed border-slate-200 rounded-[40px] space-y-4">
+                  <Newspaper className="mx-auto text-slate-200" size={64} />
+                  <p className="text-slate-400 font-black uppercase text-xs">No hay artículos en esta categoría aún.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {view === AppView.Explore && (
           <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <h2 className="text-3xl font-black text-slate-900 uppercase">Explorar <span className={themeClasses.text}>{activeCategory}</span></h2>
               <div className="relative w-full md:w-96">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input type="text" placeholder="Buscar..." className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white border border-slate-200 font-bold shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                <input type="text" placeholder="Buscar material..." className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white border border-slate-200 font-bold shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -697,12 +705,18 @@ const App: React.FC = () => {
               </div>
             </div>
             <div className="space-y-8">
-              <h3 className="text-2xl font-black text-slate-900 uppercase">Materiales de este <span className={themeClasses.text}>Docente</span></h3>
+              <h3 className="text-2xl font-black text-slate-900 uppercase">Contenido de este <span className={themeClasses.text}>Docente</span></h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {profileResources.map(res => (
                   <div key={res.id} onClick={() => { setSelectedResource(res); navigateTo(AppView.Detail, { id: res.id }); }} className="bg-white rounded-3xl border border-slate-200 overflow-hidden hover:shadow-xl group cursor-pointer flex flex-col">
                     <div className="h-44 overflow-hidden"><img src={res.thumbnail} className="w-full h-full object-cover group-hover:scale-110" /></div>
-                    <div className="p-5 flex-1 flex flex-col"><h4 className="font-bold text-slate-800 text-sm mb-2 truncate">{res.title}</h4><div className={`mt-auto text-[10px] font-black ${themeClasses.text} uppercase`}>{res.subject}</div></div>
+                    <div className="p-5 flex-1 flex flex-col">
+                      <h4 className="font-bold text-slate-800 text-sm mb-2 truncate">{res.title}</h4>
+                      <div className="mt-auto flex items-center justify-between">
+                        <div className={`text-[10px] font-black ${themeClasses.text} uppercase`}>{res.subject}</div>
+                        {res.kind === 'blog' && <Newspaper size={12} className="text-slate-300" />}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -757,49 +771,197 @@ const App: React.FC = () => {
         )}
 
         {view === AppView.Upload && currentUser && (
-          <div className="max-w-4xl mx-auto"><div className="bg-white rounded-[40px] shadow-sm border border-slate-200 p-8 md:p-12"><h2 className="text-3xl font-black text-slate-900 uppercase text-center mb-10">{editingResourceId ? 'Editar' : 'Compartir'} <span className={themeClasses.text}>Material</span></h2><form onSubmit={handleUpload} className="space-y-10"><div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-6"><input required type="text" placeholder="Título..." className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} /><RichTextEditor value={formData.summary} onChange={(val) => setFormData({...formData, summary: val})} /></div><div className="space-y-6"><select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold mb-4" value={formData.level} onChange={e => setFormData({...formData, level: e.target.value as EducationalLevel, courses: []})}>{Object.keys(SUBJECTS_BY_LEVEL).map(l => <option key={l} value={l}>{l}</option>)}</select><select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})}>{SUBJECTS_BY_LEVEL[formData.level]?.map(s => <option key={s} value={s}>{s}</option>)}</select><div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-2xl">{COURSES_BY_LEVEL[formData.level]?.map(course => (<button key={course} type="button" onClick={() => handleCourseToggle(course)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${formData.courses.includes(course) ? `${themeClasses.bg} border-transparent text-white shadow-md` : 'bg-white border-slate-100 text-slate-400'}`}>{course}</button>))}</div></div></div><div className="bg-slate-900 rounded-[32px] p-8 space-y-8"><div className="flex gap-4"><button type="button" onClick={() => setFormData({...formData, uploadMethod: 'file'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'file' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400'}`}>Enlace</button><button type="button" onClick={() => setFormData({...formData, uploadMethod: 'code'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'code' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400'}`}>HTML</button></div>{formData.uploadMethod === 'file' ? (<input type="url" placeholder="URL..." className="w-full p-6 rounded-2xl bg-slate-800 border-none text-white" value={formData.externalUrl} onChange={e => setFormData({...formData, externalUrl: e.target.value})} />) : (<textarea placeholder="Código..." className="w-full p-6 rounded-2xl bg-slate-800 border-none font-mono text-sm text-indigo-300 h-48" value={formData.pastedCode} onChange={e => setFormData({...formData, pastedCode: e.target.value})} />)}</div><button type="submit" disabled={isUploading} className={`${themeClasses.bg} w-full py-6 rounded-[28px] text-white font-black uppercase text-sm shadow-2xl`}>{isUploading ? <Loader2 className="animate-spin inline mr-2" /> : <CheckCircle2 className="inline mr-2" />} Guardar</button></form></div></div>
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-[40px] shadow-sm border border-slate-200 p-8 md:p-12">
+              <h2 className="text-3xl font-black text-slate-900 uppercase text-center mb-10">{editingResourceId ? 'Editar' : 'Crear'} <span className={themeClasses.text}>Contenido</span></h2>
+              <form onSubmit={handleUpload} className="space-y-10">
+                <div className="flex bg-slate-100 p-1.5 rounded-2xl w-fit mx-auto">
+                  <button type="button" onClick={() => setFormData({...formData, kind: 'material'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${formData.kind === 'material' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400'}`}>Material</button>
+                  <button type="button" onClick={() => setFormData({...formData, kind: 'blog'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${formData.kind === 'blog' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400'}`}>Artículo de Blog</button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <input required type="text" placeholder="Título impactante..." className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Cuerpo del {formData.kind === 'blog' ? 'Artículo' : 'Material'}</label>
+                      <RichTextEditor value={formData.summary} onChange={(val) => setFormData({...formData, summary: val})} />
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    {formData.kind === 'material' ? (
+                      <>
+                        <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.level} onChange={e => setFormData({...formData, level: e.target.value as EducationalLevel, courses: []})}>{Object.keys(SUBJECTS_BY_LEVEL).map(l => <option key={l} value={l}>{l}</option>)}</select>
+                        <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})}>{SUBJECTS_BY_LEVEL[formData.level]?.map(s => <option key={s} value={s}>{s}</option>)}</select>
+                        <div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-2xl">{COURSES_BY_LEVEL[formData.level]?.map(course => (<button key={course} type="button" onClick={() => handleCourseToggle(course)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${formData.courses.includes(course) ? `${themeClasses.bg} border-transparent text-white shadow-md` : 'bg-white border-slate-100 text-slate-400'}`}>{course}</button>))}</div>
+                      </>
+                    ) : (
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Categoría del Blog</label>
+                        <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})}>
+                          {BLOG_CATEGORIES.filter(c => c !== 'Todo').map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {formData.kind === 'material' && (
+                  <div className="bg-slate-900 rounded-[32px] p-8 space-y-8">
+                    <div className="flex gap-4">
+                      <button type="button" onClick={() => setFormData({...formData, uploadMethod: 'file'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'file' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400'}`}>Enlace</button>
+                      <button type="button" onClick={() => setFormData({...formData, uploadMethod: 'code'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-colors ${formData.uploadMethod === 'code' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400'}`}>HTML</button>
+                    </div>
+                    {formData.uploadMethod === 'file' ? (
+                      <input type="url" placeholder="URL del recurso (Drive, PDF, etc)..." className="w-full p-6 rounded-2xl bg-slate-800 border-none text-white font-bold" value={formData.externalUrl} onChange={e => setFormData({...formData, externalUrl: e.target.value})} />
+                    ) : (
+                      <textarea placeholder="Código interactivo..." className="w-full p-6 rounded-2xl bg-slate-800 border-none font-mono text-sm text-indigo-300 h-48" value={formData.pastedCode} onChange={e => setFormData({...formData, pastedCode: e.target.value})} />
+                    )}
+                  </div>
+                )}
+                
+                <button type="submit" disabled={isUploading} className={`${themeClasses.bg} w-full py-6 rounded-[28px] text-white font-black uppercase text-sm shadow-2xl`}>
+                  {isUploading ? <Loader2 className="animate-spin inline mr-2" /> : <CheckCircle2 className="inline mr-2" />} 
+                  {editingResourceId ? 'Actualizar' : 'Publicar'} {formData.kind === 'blog' ? 'Artículo' : 'Material'}
+                </button>
+              </form>
+            </div>
+          </div>
         )}
 
         {view === AppView.Detail && selectedResource && (
           <div className="animate-in fade-in duration-300 space-y-8">
-            <div className="flex items-center justify-between gap-4"><button onClick={() => navigateTo(AppView.Explore)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900"><ArrowLeft size={18}/> Volver</button>
+            <div className="flex items-center justify-between gap-4">
+              <button onClick={() => navigateTo(selectedResource.kind === 'blog' ? AppView.Blog : AppView.Explore)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900">
+                <ArrowLeft size={18}/> Volver al {selectedResource.kind === 'blog' ? 'Blog' : 'Repositorio'}
+              </button>
               <div className="flex items-center gap-3">
-                {currentUser?.email === selectedResource.email && (<><button onClick={() => handleEditResource(selectedResource)} className="px-6 py-3 bg-white text-indigo-600 border border-indigo-200 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2"><Edit3 size={14} /> Editar</button><button onClick={() => handleDeleteResource(selectedResource.id)} className="px-6 py-3 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2"><Trash2 size={14} /> Eliminar</button></>)}
-                <button onClick={() => { const url = `${window.location.origin}/?view=detail&id=${selectedResource.id}&category=${activeCategory}`; copyToClipboard(url); }} className="px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-2xl font-black text-[10px] uppercase shadow-sm">Compartir</button>
+                {currentUser?.email === selectedResource.email && (
+                  <>
+                    <button onClick={() => handleEditResource(selectedResource)} className="px-6 py-3 bg-white text-indigo-600 border border-indigo-200 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2"><Edit3 size={14} /> Editar</button>
+                    <button onClick={() => handleDeleteResource(selectedResource.id)} className="px-6 py-3 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2"><Trash2 size={14} /> Eliminar</button>
+                  </>
+                )}
+                <button onClick={() => copyToClipboard(window.location.href)} className="px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-2xl font-black text-[10px] uppercase shadow-sm">Compartir</button>
               </div>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-              <div className="lg:col-span-2 space-y-8">
-                <div className="bg-white p-10 md:p-14 rounded-[48px] shadow-sm border border-slate-100">
-                  <h1 className="text-4xl font-black text-slate-900 mb-8 leading-tight">{selectedResource.title}</h1>
-                  <div className="text-slate-600 leading-relaxed text-lg prose prose-indigo max-w-none mb-12" dangerouslySetInnerHTML={{ __html: renderContentWithVideos(selectedResource.summary) }} />
-                  <div className="flex flex-wrap gap-3">
-                    <span className={`px-5 py-2.5 ${themeClasses.softBg} ${themeClasses.softText} rounded-full text-[10px] font-black uppercase tracking-widest`}>{selectedResource.subject}</span>
-                    <span className="px-5 py-2.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">{selectedResource.level}</span>
+
+            {selectedResource.kind === 'blog' ? (
+              /* VISTA DE LECTURA PRO PARA EL BLOG */
+              <article className="max-w-[850px] mx-auto bg-white rounded-[48px] shadow-sm border border-slate-100 overflow-hidden">
+                <div className="h-96 w-full relative">
+                  <img src={selectedResource.thumbnail} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-12">
+                    <div className="space-y-4">
+                      <span className="bg-indigo-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase">{selectedResource.subject}</span>
+                      <h1 className="text-4xl md:text-5xl font-black text-white leading-tight">{selectedResource.title}</h1>
+                    </div>
                   </div>
                 </div>
-
-                {(selectedResource.pastedCode || (selectedResource.contentUrl && selectedResource.contentUrl.trim() !== '')) && (
-                  <div ref={resourceContainerRef} className="aspect-video bg-slate-900 rounded-[40px] shadow-2xl overflow-hidden relative">
-                    <iframe 
-                      src={selectedResource.pastedCode ? '' : selectedResource.contentUrl} 
-                      srcDoc={selectedResource.pastedCode} 
-                      className="w-full h-full border-none bg-white" 
-                      title={selectedResource.title} 
-                    />
-                    <button onClick={handleMaximize} className="absolute bottom-8 right-8 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:scale-105">
-                      <Maximize2 size={24} />
-                    </button>
+                
+                <div className="p-12 md:p-20">
+                  <div className="flex items-center gap-4 mb-12 pb-12 border-b border-slate-50">
+                    <img src={users.find(u => u.email === selectedResource.email)?.avatar || `https://ui-avatars.com/api/?name=${selectedResource.authorName}`} className="w-14 h-14 rounded-2xl shadow-md object-cover" />
+                    <div>
+                      <h4 className="font-black text-slate-900 uppercase text-xs tracking-tight">{selectedResource.authorName}</h4>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{selectedResource.uploadDate}</p>
+                    </div>
                   </div>
-                )}
+                  
+                  <div className="text-slate-700 leading-relaxed text-lg prose prose-indigo max-w-none prose-img:rounded-3xl prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter prose-blockquote:border-indigo-600 prose-blockquote:bg-indigo-50 prose-blockquote:p-6 prose-blockquote:rounded-2xl" dangerouslySetInnerHTML={{ __html: renderContentWithVideos(selectedResource.summary) }} />
+                  
+                  <div className="mt-20 pt-12 border-t border-slate-50 flex flex-col items-center gap-6">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">¿Te ha sido útil este artículo?</p>
+                    <div className="flex justify-center gap-3">
+                      {[1, 2, 3, 4, 5].map(v => (
+                        <button key={v} onClick={async () => {
+                          const resToRate = resources.find(r => r.id === selectedResource.id);
+                          if (!resToRate) return;
+                          const currentCount = resToRate.ratingCount || 1;
+                          const currentRating = resToRate.rating || 0;
+                          const updatedRating = ((currentRating * currentCount) + v) / (currentCount + 1);
+                          const updatedResource: Resource = { ...resToRate, rating: Number(updatedRating.toFixed(1)), ratingCount: currentCount + 1 };
+                          setResources(prev => prev.map(r => r.id === selectedResource.id ? updatedResource : r));
+                          setSelectedResource(updatedResource);
+                          await dbService.saveResource(updatedResource);
+                        }} className="text-slate-100 hover:text-amber-500 transition-colors">
+                          <Star size={32} fill={v <= Math.round(selectedResource.rating) ? 'currentColor' : 'none'} className={v <= Math.round(selectedResource.rating) ? 'text-amber-500' : 'text-slate-200'} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ) : (
+              /* VISTA DE MATERIAL NORMAL */
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                <div className="lg:col-span-2 space-y-8">
+                  <div className="bg-white p-10 md:p-14 rounded-[48px] shadow-sm border border-slate-100">
+                    <h1 className="text-4xl font-black text-slate-900 mb-8 leading-tight">{selectedResource.title}</h1>
+                    <div className="text-slate-600 leading-relaxed text-lg prose prose-indigo max-w-none mb-12" dangerouslySetInnerHTML={{ __html: renderContentWithVideos(selectedResource.summary) }} />
+                    <div className="flex flex-wrap gap-3">
+                      <span className={`px-5 py-2.5 ${themeClasses.softBg} ${themeClasses.softText} rounded-full text-[10px] font-black uppercase tracking-widest`}>{selectedResource.subject}</span>
+                      <span className="px-5 py-2.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">{selectedResource.level}</span>
+                    </div>
+                  </div>
+
+                  {(selectedResource.pastedCode || (selectedResource.contentUrl && selectedResource.contentUrl.trim() !== '')) && (
+                    <div ref={resourceContainerRef} className="aspect-video bg-slate-900 rounded-[40px] shadow-2xl overflow-hidden relative">
+                      <iframe 
+                        src={selectedResource.pastedCode ? '' : selectedResource.contentUrl} 
+                        srcDoc={selectedResource.pastedCode} 
+                        className="w-full h-full border-none bg-white" 
+                        title={selectedResource.title} 
+                      />
+                      <button onClick={handleMaximize} className="absolute bottom-8 right-8 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:scale-105 transition-all">
+                        <Maximize2 size={24} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-8">
+                  <div className="bg-white p-10 rounded-[48px] shadow-sm border border-slate-100 text-center space-y-8">
+                    <div className="cursor-pointer group" onClick={() => { setViewingUserEmail(selectedResource.email); navigateTo(AppView.Profile, { user: selectedResource.email }); }}>
+                      <img src={users.find(u => u.email === selectedResource.email)?.avatar || `https://ui-avatars.com/api/?name=${selectedResource.authorName}`} className="w-28 h-28 rounded-[36px] mx-auto shadow-xl object-cover" />
+                      <h3 className="font-black text-slate-900 text-xl mt-6">{selectedResource.authorName}</h3>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Autoría verificada</p>
+                    </div>
+                    <div className="flex flex-col gap-4 border-t border-slate-50 pt-8">
+                      <div className="flex justify-center gap-3">
+                        {[1, 2, 3, 4, 5].map(v => (
+                          <button key={v} onClick={async () => {
+                            const resToRate = resources.find(r => r.id === selectedResource.id);
+                            if (!resToRate) return;
+                            const currentCount = resToRate.ratingCount || 1;
+                            const currentRating = resToRate.rating || 0;
+                            const updatedRating = ((currentRating * currentCount) + v) / (currentCount + 1);
+                            const updatedResource: Resource = { ...resToRate, rating: Number(updatedRating.toFixed(1)), ratingCount: currentCount + 1 };
+                            setResources(prev => prev.map(r => r.id === selectedResource.id ? updatedResource : r));
+                            setSelectedResource(updatedResource);
+                            await dbService.saveResource(updatedResource);
+                          }} className="text-slate-100 hover:text-amber-500">
+                            <Star size={28} fill={v <= Math.round(selectedResource.rating) ? 'currentColor' : 'none'} className={v <= Math.round(selectedResource.rating) ? 'text-amber-500' : 'text-slate-200'} />
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">Valora el material</p>
+                    </div>
+                    <a href={selectedResource.contentUrl} target="_blank" rel="noopener noreferrer" className="block w-full py-5 bg-slate-900 text-white rounded-[24px] font-black uppercase text-[10px] tracking-widest shadow-xl">Original Externo</a>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-8"><div className="bg-white p-10 rounded-[48px] shadow-sm border border-slate-100 text-center space-y-8"><div className="cursor-pointer group" onClick={() => { setViewingUserEmail(selectedResource.email); navigateTo(AppView.Profile, { user: selectedResource.email }); }}><img src={users.find(u => u.email === selectedResource.email)?.avatar || `https://ui-avatars.com/api/?name=${selectedResource.authorName}`} className="w-28 h-28 rounded-[36px] mx-auto shadow-xl object-cover" /><h3 className="font-black text-slate-900 text-xl mt-6">{selectedResource.authorName}</h3><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Autoría verificada</p></div><div className="flex flex-col gap-4 border-t border-slate-50 pt-8"><div className="flex justify-center gap-3">{[1, 2, 3, 4, 5].map(v => (<button key={v} onClick={async () => { const resToRate = resources.find(r => r.id === selectedResource.id); if (!resToRate) return; const currentCount = resToRate.ratingCount || 1; const currentRating = resToRate.rating || 0; const updatedRating = ((currentRating * currentCount) + v) / (currentCount + 1); const updatedResource: Resource = { ...resToRate, rating: Number(updatedRating.toFixed(1)), ratingCount: currentCount + 1 }; setResources(prev => prev.map(r => r.id === selectedResource.id ? updatedResource : r)); setSelectedResource(updatedResource); await dbService.saveResource(updatedResource); }} className="text-slate-100 hover:text-amber-500"><Star size={28} fill={v <= Math.round(selectedResource.rating) ? 'currentColor' : 'none'} className={v <= Math.round(selectedResource.rating) ? 'text-amber-500' : 'text-slate-200'} /></button>))}</div><p className="text-[10px] font-bold text-slate-400 uppercase">Valora</p></div><a href={selectedResource.contentUrl} target="_blank" rel="noopener noreferrer" className="block w-full py-5 bg-slate-900 text-white rounded-[24px] font-black uppercase text-[10px] tracking-widest shadow-xl">Original Externo</a></div></div>
-            </div>
+            )}
           </div>
         )}
       </main>
 
-      <footer className="bg-white border-t border-slate-200 py-16 mt-24 text-center"><div className="flex items-center justify-center gap-2 mb-2"><GraduationCap size={32} className={themeClasses.text} /><span className="text-2xl font-black uppercase tracking-tighter">NOGALES<span className={themeClasses.text}>PT</span></span></div><p className="text-xs font-bold text-slate-400 uppercase tracking-[0.4em]">© 2025 • Repositorio Docente Colaborativo</p></footer>
+      <footer className="bg-white border-t border-slate-200 py-16 mt-24 text-center">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <GraduationCap size={32} className={themeClasses.text} />
+          <span className="text-2xl font-black uppercase tracking-tighter">NOGALES<span className={themeClasses.text}>PT</span></span>
+        </div>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.4em]">© 2025 • Blog y Repositorio Docente Colaborativo</p>
+      </footer>
     </div>
   );
 };

@@ -34,6 +34,7 @@ export interface Resource {
   thumbnail: string;
   contentUrl: string;
   pastedCode?: string;
+  kind?: 'material' | 'blog'; // Nuevo campo para diferenciar
 }
 
 export interface PrivateMessage {
@@ -53,5 +54,6 @@ export enum AppView {
   Detail = 'detail',
   Profile = 'profile',
   TopDocentes = 'top-docentes',
-  Messages = 'messages'
+  Messages = 'messages',
+  Blog = 'blog' // Nueva vista de Blog
 }
