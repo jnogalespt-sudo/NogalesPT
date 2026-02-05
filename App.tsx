@@ -475,7 +475,7 @@ const App: React.FC = () => {
         email: currentUser.email,
         summary: formData.summary,
         level: formData.level,
-        subject: formData.subject,
+        subject: formData.subject, // Se guarda el valor del estado que ahora se sincroniza correctamente
         courses: formData.courses,
         resourceType: formData.resourceType,
         fileType: formData.uploadMethod === 'code' ? 'html' : 'pdf',
@@ -814,8 +814,8 @@ const App: React.FC = () => {
               <h2 className="text-3xl font-black text-slate-900 uppercase text-center mb-10">{editingResourceId ? 'Editar' : 'Crear'} <span className={themeClasses.text}>Contenido Docente</span></h2>
               <form onSubmit={handleUpload} className="space-y-10">
                 <div className="flex bg-slate-100 p-1.5 rounded-2xl w-fit mx-auto">
-                  <button type="button" onClick={() => setFormData({...formData, kind: 'material'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${formData.kind === 'material' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Material Didáctico</button>
-                  <button type="button" onClick={() => setFormData({...formData, kind: 'blog'})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${formData.kind === 'blog' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Artículo de Blog</button>
+                  <button type="button" onClick={() => setFormData({...formData, kind: 'material', subject: SUBJECTS_BY_LEVEL[formData.level][0]})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${formData.kind === 'material' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Material Didáctico</button>
+                  <button type="button" onClick={() => setFormData({...formData, kind: 'blog', subject: BLOG_CATEGORIES[1]})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${formData.kind === 'blog' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Artículo de Blog</button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -831,7 +831,7 @@ const App: React.FC = () => {
                       <>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nivel Educativo</label>
-                          <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none cursor-pointer" value={formData.level} onChange={e => setFormData({...formData, level: e.target.value as EducationalLevel, courses: []})}>{Object.keys(SUBJECTS_BY_LEVEL).map(l => <option key={l} value={l}>{l}</option>)}</select>
+                          <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none cursor-pointer" value={formData.level} onChange={e => setFormData({...formData, level: e.target.value as EducationalLevel, courses: [], subject: SUBJECTS_BY_LEVEL[e.target.value as EducationalLevel][0]})}>{Object.keys(SUBJECTS_BY_LEVEL).map(l => <option key={l} value={l}>{l}</option>)}</select>
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Materia / Área</label>
