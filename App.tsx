@@ -84,6 +84,28 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
     exec("insertHTML", table);
   };
 
+  const handleImage = () => {
+    const imageUrl = prompt('URL de la imagen:');
+    if (!imageUrl) return;
+
+    const linkUrl = prompt('URL de enlace opcional (deja vacío si no deseas enlace):');
+    const width = prompt('Ancho deseado (ej. 100%, 500px):', '100%');
+
+    // Construimos el HTML de la imagen con estilos inline para el redimensionado
+    // La clase 'editor-resizable-img' se usará para los efectos CSS
+    let imgHtml = `<img src="${imageUrl}" 
+      style="width: ${width || '100%'}; max-width: 100%; height: auto; display: inline-block; vertical-align: middle; margin: 10px 0; border-radius: 8px; resize: both; overflow: hidden; cursor: pointer; border: 2px solid transparent;" 
+      class="editor-resizable-img" 
+      alt="Imagen insertada" />`;
+
+    // Si hay URL de enlace, envolvemos la imagen
+    if (linkUrl && linkUrl.trim() !== '') {
+      imgHtml = `<a href="${linkUrl}" target="_blank" rel="noopener noreferrer">${imgHtml}</a>`;
+    }
+
+    exec("insertHTML", imgHtml + '<p><br></p>');
+  };
+
   const ToolbarButton = ({ onClick, icon: Icon, title, active = false }: any) => (
     <button
       type="button"
@@ -99,6 +121,17 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
 
   return (
     <div className="w-full flex flex-col border border-slate-300 rounded-[12px] bg-[#fdfdfd] shadow-sm overflow-hidden focus-within:ring-1 focus-within:ring-indigo-200 transition-all">
+      {/* Estilos específicos para las imágenes del editor */}
+      <style>{`
+        .editor-resizable-img:hover {
+          border-color: #3b82f6 !important;
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+        .editor-resizable-img {
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+      `}</style>
+      
       <div className="bg-[#f0f2f5] border-b border-slate-300 p-1.5 flex flex-wrap items-center gap-1">
         <div className="flex gap-0.5 pr-1 border-r border-slate-400">
           <ToolbarButton onClick={() => exec('bold')} icon={Bold} title="Negrita" />
@@ -125,7 +158,7 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
 
         <div className="flex gap-0.5 items-center">
           <ToolbarButton onClick={() => {const url = prompt('URL:'); if(url) exec('createLink', url)}} icon={LinkIcon} title="Enlace" />
-          <ToolbarButton onClick={() => {const url = prompt('Imagen URL:'); if(url) exec('insertImage', url)}} icon={ImageIcon} title="Imagen" />
+          <ToolbarButton onClick={handleImage} icon={ImageIcon} title="Insertar Imagen Avanzada" />
           <ToolbarButton onClick={handleTable} icon={TableIcon} title="Tabla" />
           <ToolbarButton onClick={() => exec('insertHorizontalRule')} icon={Minus} title="Línea horizontal" />
           <button 
