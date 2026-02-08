@@ -604,9 +604,7 @@ const App: React.FC = () => {
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-[50] h-16 flex items-center">
         <div className="max-w-7xl mx-auto px-4 w-full flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigateTo(AppView.Home)}>
-            <div className={`${themeClasses.bg} p-1.5 rounded-xl text-white shadow-sm flex items-center justify-center`}>
-              <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-lg object-cover" />
-            </div>
+            <div className={`${themeClasses.bg} p-2 rounded-xl text-white`}><GraduationCap size={20} /></div>
             <span className="text-xl font-black uppercase tracking-tighter">NOGALES<span className={themeClasses.text}>PT</span></span>
           </div>
           <div className="hidden md:flex items-center gap-6">
@@ -1042,8 +1040,8 @@ const App: React.FC = () => {
       </main>
 
       <footer className="bg-white border-t border-slate-200 py-16 mt-24 text-center">
-        <div className="flex flex-col items-center justify-center gap-3 mb-2">
-          <img src="/logo.png" alt="NOGALESPT Logo" className="w-12 h-12 rounded-xl" />
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <GraduationCap size={32} className={themeClasses.text} />
           <span className="text-2xl font-black uppercase tracking-tighter">NOGALES<span className={themeClasses.text}>PT</span></span>
         </div>
         <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.4em]">© 2025 • Blog y Repositorio Docente Colaborativo para Andalucía</p>
