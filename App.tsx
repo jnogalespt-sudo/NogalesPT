@@ -11,7 +11,7 @@ import {
   Twitter, AtSign, Send, MessageCircle, Trash2, Edit3, ShieldAlert, KeyRound,
   Layers3, Maximize2, Inbox, Copy, Check, LogIn, Type, List, ListOrdered, Bold, Italic, Heading1, Heading2,
   Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify, Quote, Table as TableIcon, 
-  Eraser, Hash, Type as TypeIcon, Palette, Indent, Outdent, Minus, Smile, Newspaper
+  Eraser, Hash, Type as TypeIcon, Palette, Indent, Outdent, Minus, Smile, Newspaper, ShieldCheck
 } from 'lucide-react';
 import { AppView, Resource, User as UserType, EducationalLevel, MainCategory, PrivateMessage } from './types';
 import { SUBJECTS_BY_LEVEL, COURSES_BY_LEVEL } from './constants';
@@ -32,6 +32,9 @@ const BLOG_CATEGORIES = [
   'Audición y Lenguaje (AL)'
 ];
 
+// --- CONFIGURACIÓN TÉCNICA ---
+const GTM_ID = 'GTM-PCMTTC42';
+
 // --- UTILIDADES ---
 const stripHtml = (html: string) => {
   if (typeof document === 'undefined') return html;
@@ -40,11 +43,26 @@ const stripHtml = (html: string) => {
   return tmp.textContent || tmp.innerText || "";
 };
 
-const renderContentWithVideos = (content: string) => {
+const renderContentWithVideos = (content: string, consent: boolean | null) => {
   if (!content) return "";
   const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})(?:[^\s<]*)/g;
   
   return content.replace(youtubeRegex, (match, videoId) => {
+    if (consent !== true) {
+      return `
+        <div class="my-8 aspect-video w-full rounded-[32px] overflow-hidden shadow-2xl bg-slate-100 border-4 border-white flex flex-col items-center justify-center p-8 text-center space-y-4">
+          <div class="p-4 bg-slate-200 rounded-full text-slate-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-alert"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+          </div>
+          <div>
+            <p class="text-sm font-black text-slate-800 uppercase tracking-tight">Contenido bloqueado por privacidad</p>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Acepta las cookies para ver este vídeo de YouTube</p>
+          </div>
+          <button onclick="window.dispatchEvent(new CustomEvent('open-cookie-banner'))" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase shadow-lg hover:bg-indigo-700 transition-all">Gestionar Cookies</button>
+        </div>
+      `;
+    }
+
     return `
       <div class="my-8 aspect-video w-full rounded-[32px] overflow-hidden shadow-2xl bg-slate-900 border-4 border-white">
         <iframe
@@ -91,14 +109,11 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
     const linkUrl = prompt('URL de enlace opcional (deja vacío si no deseas enlace):');
     const width = prompt('Ancho deseado (ej. 100%, 500px):', '100%');
 
-    // Construimos el HTML de la imagen con estilos inline para el redimensionado
-    // La clase 'editor-resizable-img' se usará para los efectos CSS
     let imgHtml = `<img src="${imageUrl}" 
       style="width: ${width || '100%'}; max-width: 100%; height: auto; display: inline-block; vertical-align: middle; margin: 10px 0; border-radius: 8px; resize: both; overflow: hidden; cursor: pointer; border: 2px solid transparent;" 
       class="editor-resizable-img" 
       alt="Imagen insertada" />`;
 
-    // Si hay URL de enlace, envolvemos la imagen
     if (linkUrl && linkUrl.trim() !== '') {
       imgHtml = `<a href="${linkUrl}" target="_blank" rel="noopener noreferrer">${imgHtml}</a>`;
     }
@@ -121,7 +136,6 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
 
   return (
     <div className="w-full flex flex-col border border-slate-300 rounded-[12px] bg-[#fdfdfd] shadow-sm overflow-hidden focus-within:ring-1 focus-within:ring-indigo-200 transition-all">
-      {/* Estilos específicos para las imágenes del editor */}
       <style>{`
         .editor-resizable-img:hover {
           border-color: #3b82f6 !important;
@@ -239,6 +253,10 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // --- ESTADO DE COOKIES Y RGPD ---
+  const [cookieConsent, setCookieConsent] = useState<boolean | null>(null);
+  const [showCookieBanner, setShowCookieBanner] = useState(false);
+
   const [view, setView] = useState<AppView>(AppView.Home);
   const [activeCategory, setActiveCategory] = useState<MainCategory>('PT-AL');
   const [activeBlogCategory, setActiveBlogCategory] = useState<string>('Todo');
@@ -272,7 +290,50 @@ const App: React.FC = () => {
     instagram: '', linkedin: '', tiktok: '', twitter: '', website: ''
   });
 
-  // --- LÓGICA DE URL ---
+  // --- LÓGICA DE GTM ---
+  const initGTM = () => {
+    if (typeof window === 'undefined' || (window as any).gtmInitialized) return;
+    
+    (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s) as HTMLScriptElement,dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode?.insertBefore(j,f);
+    })(window,document,'script','dataLayer', GTM_ID);
+    
+    (window as any).gtmInitialized = true;
+  };
+
+  // --- GESTIÓN DE COOKIES ---
+  useEffect(() => {
+    const savedConsent = localStorage.getItem('nogalespt_cookie_consent');
+    if (savedConsent === 'accepted') {
+      setCookieConsent(true);
+      initGTM();
+    } else if (savedConsent === 'rejected') {
+      setCookieConsent(false);
+    } else {
+      setShowCookieBanner(true);
+    }
+
+    // Listener para abrir banner desde el placeholder de YouTube
+    const handleOpenBanner = () => setShowCookieBanner(true);
+    window.addEventListener('open-cookie-banner', handleOpenBanner);
+    return () => window.removeEventListener('open-cookie-banner', handleOpenBanner);
+  }, []);
+
+  const handleAcceptCookies = () => {
+    localStorage.setItem('nogalespt_cookie_consent', 'accepted');
+    setCookieConsent(true);
+    setShowCookieBanner(false);
+    initGTM();
+  };
+
+  const handleRejectCookies = () => {
+    localStorage.setItem('nogalespt_cookie_consent', 'rejected');
+    setCookieConsent(false);
+    setShowCookieBanner(false);
+  };
+
   const urlParams = new URLSearchParams(window.location.search);
   const isStandalone = urlParams.get('standalone') === 'true';
   const standaloneId = urlParams.get('id');
@@ -312,7 +373,6 @@ const App: React.FC = () => {
   const activeProfile = useMemo(() => users.find(u => u.email === viewingUserEmail), [users, viewingUserEmail]);
   const profileResources = useMemo(() => resources.filter(r => r.email === viewingUserEmail), [resources, viewingUserEmail]);
 
-  // --- SEO DINÁMICO MEJORADO ---
   useEffect(() => {
     let title = "Repositorio Colaborativo para Docentes | NOGALESPT";
     let description = "Materiales de calidad, interactivos y adaptados para maestros de PT y AL en Andalucía.";
@@ -333,7 +393,6 @@ const App: React.FC = () => {
       description = `Busca y filtra entre materiales educativos de ${activeCategory} adaptados por la comunidad docente.`;
     }
 
-    // Aplicar SEO al documento
     document.title = title;
     
     const updateMeta = (name: string, content: string, attr: 'name' | 'property' = 'name') => {
@@ -478,7 +537,7 @@ const App: React.FC = () => {
 
   const filteredResources = useMemo(() => {
     return resources.filter(res => {
-      if (res.kind === 'blog') return false; // Excluir blog de la exploración normal
+      if (res.kind === 'blog') return false; 
       const matchesCategory = res.mainCategory === activeCategory;
       const matchesSearch = res.title.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesLevel = filterLevel === 'Todos' || res.level === filterLevel;
@@ -508,7 +567,7 @@ const App: React.FC = () => {
         email: currentUser.email,
         summary: formData.summary,
         level: formData.level,
-        subject: formData.subject, // Se guarda el valor del estado que ahora se sincroniza correctamente
+        subject: formData.subject, 
         courses: formData.courses,
         resourceType: formData.resourceType,
         fileType: formData.uploadMethod === 'code' ? 'html' : 'pdf',
@@ -930,7 +989,6 @@ const App: React.FC = () => {
             </div>
 
             {selectedResource.kind === 'blog' ? (
-              /* VISTA DE LECTURA PRO PARA EL BLOG */
               <article className="max-w-[850px] mx-auto bg-white rounded-[48px] shadow-sm border border-slate-100 overflow-hidden animate-in slide-in-from-bottom-8 duration-700">
                 <div className="h-[450px] w-full relative">
                   <img src={selectedResource.thumbnail} className="w-full h-full object-cover" />
@@ -951,7 +1009,7 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="text-slate-700 leading-[1.8] text-xl prose prose-indigo max-w-none prose-img:rounded-[32px] prose-img:shadow-2xl prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter prose-headings:text-slate-900 prose-blockquote:border-indigo-600 prose-blockquote:bg-indigo-50/50 prose-blockquote:p-8 prose-blockquote:rounded-3xl prose-blockquote:not-italic prose-blockquote:font-bold prose-blockquote:text-indigo-900 prose-li:font-medium" dangerouslySetInnerHTML={{ __html: renderContentWithVideos(selectedResource.summary) }} />
+                  <div className="text-slate-700 leading-[1.8] text-xl prose prose-indigo max-w-none prose-img:rounded-[32px] prose-img:shadow-2xl prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter prose-headings:text-slate-900 prose-blockquote:border-indigo-600 prose-blockquote:bg-indigo-50/50 prose-blockquote:p-8 prose-blockquote:rounded-3xl prose-blockquote:not-italic prose-blockquote:font-bold prose-blockquote:text-indigo-900 prose-li:font-medium" dangerouslySetInnerHTML={{ __html: renderContentWithVideos(selectedResource.summary, cookieConsent) }} />
                   
                   <div className="mt-24 pt-16 border-t border-slate-50 flex flex-col items-center gap-8 bg-slate-50/50 rounded-[40px] p-12">
                     <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Valora este conocimiento</p>
@@ -977,12 +1035,11 @@ const App: React.FC = () => {
                 </div>
               </article>
             ) : (
-              /* VISTA DE MATERIAL NORMAL */
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 <div className="lg:col-span-2 space-y-8">
                   <div className="bg-white p-10 md:p-14 rounded-[48px] shadow-sm border border-slate-100">
                     <h1 className="text-4xl font-black text-slate-900 mb-8 leading-tight">{selectedResource.title}</h1>
-                    <div className="text-slate-600 leading-relaxed text-lg prose prose-indigo max-w-none mb-12" dangerouslySetInnerHTML={{ __html: renderContentWithVideos(selectedResource.summary) }} />
+                    <div className="text-slate-600 leading-relaxed text-lg prose prose-indigo max-w-none mb-12" dangerouslySetInnerHTML={{ __html: renderContentWithVideos(selectedResource.summary, cookieConsent) }} />
                     <div className="flex flex-wrap gap-3">
                       <span className={`px-5 py-2.5 ${themeClasses.softBg} ${themeClasses.softText} rounded-full text-[10px] font-black uppercase tracking-widest`}>{selectedResource.subject}</span>
                       <span className="px-5 py-2.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">{selectedResource.level}</span>
@@ -1046,6 +1103,37 @@ const App: React.FC = () => {
         </div>
         <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.4em]">© 2025 • Blog y Repositorio Docente Colaborativo para Andalucía</p>
       </footer>
+
+      {/* --- BANNER DE COOKIES (RGPD) --- */}
+      {showCookieBanner && (
+        <div className="fixed bottom-0 left-0 right-0 z-[9999] p-4 md:p-8 animate-in slide-in-from-bottom-full duration-500">
+          <div className="max-w-7xl mx-auto bg-slate-900 text-white rounded-[32px] p-6 md:p-10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] border border-slate-800 flex flex-col md:flex-row items-center gap-8 backdrop-blur-md bg-slate-900/95">
+            <div className="bg-indigo-600/20 p-4 rounded-3xl text-indigo-400">
+              <ShieldCheck size={40} />
+            </div>
+            <div className="flex-1 space-y-2 text-center md:text-left">
+              <h4 className="text-lg font-black uppercase tracking-tight">Tu privacidad es fundamental</h4>
+              <p className="text-slate-400 text-sm font-medium leading-relaxed max-w-2xl">
+                Utilizamos cookies propias y de terceros (como Google Tag Manager) para mejorar tu experiencia docente, analizar el tráfico y mostrar contenido multimedia de YouTube. Al aceptar, permites que NOGALESPT sea más inteligente para ti.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+              <button 
+                onClick={handleRejectCookies}
+                className="px-8 py-4 bg-slate-800 text-slate-300 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-all border border-slate-700 active:scale-95"
+              >
+                Rechazar
+              </button>
+              <button 
+                onClick={handleAcceptCookies}
+                className="px-10 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 hover:bg-indigo-500 hover:scale-105 transition-all active:scale-95"
+              >
+                Aceptar Cookies
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
