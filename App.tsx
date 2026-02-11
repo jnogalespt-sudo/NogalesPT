@@ -280,6 +280,7 @@ const App: React.FC = () => {
 
   const resourceContainerRef = useRef<HTMLDivElement>(null);
 
+  // --- ESTADO DE FORMULARIO CON TIPADO FUERTE ---
   const [formData, setFormData] = useState({
     title: '', summary: '', level: 'Infantil' as LevelKey, subject: 'Crecimiento en Armonía',
     courses: [] as string[], resourceType: 'Material Didáctico', 
