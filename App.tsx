@@ -92,6 +92,7 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
   }, []);
 
   const exec = (command: string, arg?: string) => {
+    if (typeof document === 'undefined') return;
     document.execCommand(command, false, arg);
     if (editorRef.current) onChange(editorRef.current.innerHTML);
   };
@@ -105,11 +106,12 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
   };
 
   const handleImage = () => {
-    const imageUrl = prompt('URL de la imagen:');
+    if (typeof window === 'undefined') return;
+    const imageUrl = window.prompt('URL de la imagen:');
     if (!imageUrl) return;
 
-    const linkUrl = prompt('URL de enlace opcional (deja vacío si no deseas enlace):');
-    const width = prompt('Ancho deseado (ej. 100%, 500px):', '100%');
+    const linkUrl = window.prompt('URL de enlace opcional (deja vacío si no deseas enlace):');
+    const width = window.prompt('Ancho deseado (ej. 100%, 500px):', '100%');
 
     let imgHtml = `<img src="${imageUrl}" 
       style="width: ${width || '100%'}; max-width: 100%; height: auto; display: inline-block; vertical-align: middle; margin: 10px 0; border-radius: 8px; resize: both; overflow: hidden; cursor: pointer; border: 2px solid transparent;" 
@@ -173,7 +175,7 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
         </div>
 
         <div className="flex gap-0.5 items-center">
-          <ToolbarButton onClick={() => {const url = prompt('URL:'); if(url) exec('createLink', url)}} icon={LinkIcon} title="Enlace" />
+          <ToolbarButton onClick={() => {if(typeof window !== 'undefined') { const url = window.prompt('URL:'); if(url) exec('createLink', url)}}} icon={LinkIcon} title="Enlace" />
           <ToolbarButton onClick={handleImage} icon={ImageIcon} title="Insertar Imagen Avanzada" />
           <ToolbarButton onClick={handleTable} icon={TableIcon} title="Tabla" />
           <ToolbarButton onClick={() => exec('insertHorizontalRule')} icon={Minus} title="Línea horizontal" />
@@ -237,7 +239,7 @@ const SocialLink = ({ platform, handle }: { platform: 'instagram' | 'linkedin' |
     twitter: { icon: Twitter, color: 'hover:text-sky-500 hover:bg-sky-50', url: (h: string) => `https://twitter.com/${h}`, label: 'Twitter' },
     website: { icon: Globe, color: 'hover:text-emerald-600 hover:bg-emerald-50', url: (h: string) => h.startsWith('http') ? h : `https://${h}`, label: 'Web' }
   };
-  const config = platforms[platform as keyof typeof platforms];
+  const config = (platforms as SafeAny)[platform];
   if (!config) return null;
   return (
     <a href={config.url(handle)} target="_blank" rel="noopener noreferrer" title={config.label} className={`p-2.5 rounded-xl bg-white border border-slate-100 shadow-sm transition-all text-slate-400 ${config.color} hover:shadow-md hover:-translate-y-0.5 flex items-center justify-center`}>
@@ -265,8 +267,6 @@ const App: React.FC = () => {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLevel, setFilterLevel] = useState<string>('Todos');
-  const [filterCourse, setFilterCourse] = useState<string>('Todos');
-  const [filterSubject, setFilterSubject] = useState<string>('Todas');
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
@@ -277,8 +277,6 @@ const App: React.FC = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [registerName, setRegisterName] = useState('');
-
-  const resourceContainerRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState({
     title: '', summary: '', level: 'Infantil' as EducationalLevel, subject: 'Crecimiento en Armonía',
@@ -292,53 +290,77 @@ const App: React.FC = () => {
     instagram: '', linkedin: '', tiktok: '', twitter: '', website: ''
   });
 
-  // --- LÓGICA DE GTM ---
+  // --- LÓGICA DE GTM (PROTEGIDA) ---
   const initGTM = () => {
-    if (typeof window === 'undefined' || (window as any).gtmInitialized) return;
+    if (typeof window === 'undefined' || (window as any).gtmInitialized || cookieConsent !== true) return;
     
-    (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s) as HTMLScriptElement,dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode?.insertBefore(j,f);
-    })(window,document,'script','dataLayer', GTM_ID);
+    (function(w: any, d: any, s: any, l: any, i: any){
+      w[l] = w[l] || [];
+      w[l].push({'gtm.start': new Date().getTime(), event:'gtm.js'});
+      var f = d.getElementsByTagName(s)[0],
+      j = d.createElement(s), dl = l != 'dataLayer' ? '&l='+l : '';
+      j.async = true;
+      j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+      if (f && f.parentNode) f.parentNode.insertBefore(j, f);
+    })(window, document, 'script', 'dataLayer', GTM_ID);
     
     (window as any).gtmInitialized = true;
   };
 
-  // --- GESTIÓN DE COOKIES ---
+  // --- GESTIÓN DE COOKIES (PROTEGIDA PARA SSR) ---
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const savedConsent = localStorage.getItem('nogalespt_cookie_consent');
     if (savedConsent === 'accepted') {
       setCookieConsent(true);
-      initGTM();
     } else if (savedConsent === 'rejected') {
       setCookieConsent(false);
     } else {
       setShowCookieBanner(true);
     }
 
-    // Listener para abrir banner desde el placeholder de YouTube
     const handleOpenBanner = () => setShowCookieBanner(true);
     window.addEventListener('open-cookie-banner', handleOpenBanner);
     return () => window.removeEventListener('open-cookie-banner', handleOpenBanner);
   }, []);
 
+  // Efecto para GTM post-consentimiento
+  useEffect(() => {
+    if (cookieConsent === true) {
+      initGTM();
+    }
+  }, [cookieConsent]);
+
   const handleAcceptCookies = () => {
+    if (typeof window === 'undefined') return;
     localStorage.setItem('nogalespt_cookie_consent', 'accepted');
     setCookieConsent(true);
     setShowCookieBanner(false);
-    initGTM();
   };
 
   const handleRejectCookies = () => {
+    if (typeof window === 'undefined') return;
     localStorage.setItem('nogalespt_cookie_consent', 'rejected');
     setCookieConsent(false);
     setShowCookieBanner(false);
   };
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const isStandalone = urlParams.get('standalone') === 'true';
-  const standaloneId = urlParams.get('id');
+  // Protección de URL Params (Movido a estado de efecto seguro)
+  const [urlParamsState, setUrlParamsState] = useState<{isStandalone: boolean, standaloneId: string | null}>({
+    isStandalone: false,
+    standaloneId: null
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      setUrlParamsState({
+        isStandalone: params.get('standalone') === 'true',
+        standaloneId: params.get('id')
+      });
+    }
+  }, []);
 
   const navigateTo = (newView: AppView, params: Record<string, string> = {}) => {
     if (newView === AppView.Upload && !currentUser) {
@@ -348,17 +370,20 @@ const App: React.FC = () => {
     }
     setView(newView);
     setIsMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    try {
-      const searchParams = new URLSearchParams();
-      searchParams.set('view', newView);
-      if (params.id) searchParams.set('id', params.id);
-      if (params.user) searchParams.set('user', params.user);
-      if (params.category) searchParams.set('category', params.category);
-      window.history.pushState({}, '', `?${searchParams.toString()}`);
-    } catch (e) {
-      console.warn("Navegación URL limitada.");
+      try {
+        const searchParams = new URLSearchParams();
+        searchParams.set('view', newView);
+        if (params.id) searchParams.set('id', params.id);
+        if (params.user) searchParams.set('user', params.user);
+        if (params.category) searchParams.set('category', params.category);
+        window.history.pushState({}, '', `?${searchParams.toString()}`);
+      } catch (e) {
+        console.warn("Navegación URL limitada.");
+      }
     }
 
     if (![AppView.Upload, AppView.Profile, AppView.Detail].includes(newView)) {
@@ -375,7 +400,10 @@ const App: React.FC = () => {
   const activeProfile = useMemo(() => users.find(u => u.email === viewingUserEmail), [users, viewingUserEmail]);
   const profileResources = useMemo(() => resources.filter(r => r.email === viewingUserEmail), [resources, viewingUserEmail]);
 
+  // Protección de Document y Meta Tags
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+
     let title = "Repositorio Colaborativo para Docentes | NOGALESPT";
     let description = "Materiales de calidad, interactivos y adaptados para maestros de PT y AL en Andalucía.";
 
@@ -383,16 +411,7 @@ const App: React.FC = () => {
       title = `${selectedResource.title} | ${selectedResource.kind === 'blog' ? 'Blog' : 'Material'} NOGALESPT`;
       description = stripHtml(selectedResource.summary).substring(0, 160) + "...";
     } else if (view === AppView.Blog) {
-      if (activeBlogCategory === 'Todo') {
-        title = "Blog Educativo: Estrategias y Recursos de PT y AL | NOGALESPT";
-        description = "Explora nuestro blog educativo con las mejores estrategias y recursos especializados en PT y AL para docentes.";
-      } else {
-        title = `Artículos y Estrategias sobre ${activeBlogCategory} | NOGALESPT`;
-        description = `Descubre artículos, estrategias y recursos especializados sobre ${activeBlogCategory} en el blog de NOGALESPT para maestros y profesionales de la educación especial.`;
-      }
-    } else if (view === AppView.Explore) {
-      title = `Explorar Recursos de ${activeCategory} | NOGALESPT`;
-      description = `Busca y filtra entre materiales educativos de ${activeCategory} adaptados por la comunidad docente.`;
+      title = activeBlogCategory === 'Todo' ? "Blog Educativo | NOGALESPT" : `Estrategias sobre ${activeBlogCategory} | NOGALESPT`;
     }
 
     document.title = title;
@@ -410,8 +429,9 @@ const App: React.FC = () => {
     updateMeta('description', description);
     updateMeta('og:title', title, 'property');
     updateMeta('og:description', description, 'property');
-    updateMeta('og:url', window.location.href, 'property');
-
+    if (typeof window !== 'undefined') {
+      updateMeta('og:url', window.location.href, 'property');
+    }
   }, [view, selectedResource, activeBlogCategory, activeCategory]);
 
   const cleanGoogleDriveUrl = (url: string) => {
@@ -431,29 +451,20 @@ const App: React.FC = () => {
         setResources(resData || []);
         setUsers(usersData || []);
         
-        const stored = localStorage.getItem('nogalespt_current_user');
-        if (stored) {
-          const parsedUser = JSON.parse(stored);
-          if (parsedUser) {
-            setCurrentUser(parsedUser);
-            setProfileForm(parsedUser);
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem('nogalespt_current_user');
+          if (stored) {
+            const parsedUser = JSON.parse(stored);
+            if (parsedUser) {
+              setCurrentUser(parsedUser);
+              setProfileForm(parsedUser);
+            }
           }
-        }
 
-        const params = new URLSearchParams(window.location.search);
-        const viewParam = params.get('view') as AppView;
-        const idParam = params.get('id');
-        const catParam = params.get('category');
+          const params = new URLSearchParams(window.location.search);
+          const viewParam = params.get('view') as AppView;
+          const idParam = params.get('id');
 
-        if (viewParam === AppView.Blog) {
-          if (catParam && BLOG_CATEGORIES.includes(catParam)) {
-            setActiveBlogCategory(catParam);
-          }
-          setView(AppView.Blog);
-        } else {
-          if (catParam && (catParam === 'General' || catParam === 'PT-AL')) {
-            setActiveCategory(catParam as MainCategory);
-          }
           if (viewParam) {
             setView(viewParam);
             if (viewParam === AppView.Detail && idParam) {
@@ -462,16 +473,22 @@ const App: React.FC = () => {
             }
           }
         }
-      } catch (error) { console.error("Error cargando app:", error); } finally { setIsLoading(false); }
+      } catch (error) { 
+        console.error("Error cargando app:", error); 
+      } finally { 
+        setIsLoading(false); 
+      }
     };
     initApp();
   }, []);
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    });
+    if (typeof window !== 'undefined' && navigator?.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      });
+    }
   };
 
   const handleCourseToggle = (course: string) => {
@@ -500,7 +517,7 @@ const App: React.FC = () => {
   };
 
   const handleDeleteResource = async (id: string) => {
-    if (!window.confirm("¿Eliminar definitivamente?")) return;
+    if (typeof window !== 'undefined' && !window.confirm("¿Eliminar definitivamente?")) return;
     try {
       await dbService.deleteResource(id);
       setResources(prev => prev.filter(r => r.id !== id));
@@ -528,7 +545,6 @@ const App: React.FC = () => {
         levelTeachers[res.email].totalRating += res.rating || 0;
         levelTeachers[res.email].ratedResourcesCount += 1;
       });
-      // --- FIX TS7015 RADICAL ---
       (rankings as SafeAny)[level] = Object.values(levelTeachers).map((t: any) => {
         const avg = t.ratedResourcesCount > 0 ? t.totalRating / t.ratedResourcesCount : 0;
         const score = (t.count * 10) + (avg * 5);
@@ -584,7 +600,7 @@ const App: React.FC = () => {
       };
       await dbService.saveResource(newRes);
       setResources(prev => editingResourceId ? prev.map(r => r.id === editingResourceId ? newRes : r) : [newRes, ...prev]);
-      alert("Contenido guardado.");
+      if (typeof window !== 'undefined') window.alert("Contenido guardado.");
       navigateTo(formData.kind === 'blog' ? AppView.Blog : AppView.Explore);
     } catch (err) { console.error(err); } finally { setIsUploading(false); }
   };
@@ -596,7 +612,9 @@ const App: React.FC = () => {
     if (user) {
       setCurrentUser(user);
       setProfileForm(user);
-      localStorage.setItem('nogalespt_current_user', JSON.stringify(user));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nogalespt_current_user', JSON.stringify(user));
+      }
       navigateTo(AppView.Home);
     } else { setAuthError("Credenciales incorrectas."); }
   };
@@ -612,7 +630,9 @@ const App: React.FC = () => {
     setUsers(prev => [...prev, newUser]);
     setCurrentUser(newUser);
     setProfileForm(newUser);
-    localStorage.setItem('nogalespt_current_user', JSON.stringify(newUser));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nogalespt_current_user', JSON.stringify(newUser));
+    }
     navigateTo(AppView.Home);
   };
 
@@ -622,15 +642,16 @@ const App: React.FC = () => {
     const updatedUser = { ...currentUser, ...profileForm };
     await dbService.saveUser(updatedUser);
     setCurrentUser(updatedUser);
-    localStorage.setItem('nogalespt_current_user', JSON.stringify(updatedUser));
-    alert("Perfil actualizado");
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nogalespt_current_user', JSON.stringify(updatedUser));
+      window.alert("Perfil actualizado");
+    }
   };
 
   const resetForm = () => {
     setEditingResourceId(null);
     setFormData({
       title: '', summary: '', level: 'Infantil', 
-      // --- FIX TS7015 RADICAL ---
       subject: (SUBJECTS_BY_LEVEL as SafeAny)['Infantil'][0], 
       courses: [], resourceType: 'Material Didáctico', 
       mainCategory: activeCategory, uploadMethod: 'file', externalUrl: '', pastedCode: '', kind: 'material'
@@ -638,7 +659,7 @@ const App: React.FC = () => {
   };
 
   const handleMaximize = () => {
-    if (!selectedResource) return;
+    if (!selectedResource || typeof window === 'undefined') return;
     const url = `${window.location.origin}${window.location.pathname}?standalone=true&id=${selectedResource.id}`;
     window.open(url, '_blank');
   };
@@ -650,13 +671,13 @@ const App: React.FC = () => {
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-white flex-col gap-6"><div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div><h2 className="text-xl font-black text-slate-800 uppercase tracking-tighter">NOGALES<span className="text-indigo-600">PT</span></h2></div>;
 
-  if (isStandalone && standaloneId) {
-    const res = resources.find(r => r.id === standaloneId);
+  if (urlParamsState.isStandalone && urlParamsState.standaloneId) {
+    const res = resources.find(r => r.id === urlParamsState.standaloneId);
     if (!res) return <div className="min-h-screen flex items-center justify-center font-black uppercase text-slate-400">Recurso no encontrado</div>;
     return (
       <div className="fixed inset-0 bg-white z-[9999] overflow-hidden">
         <iframe src={res.pastedCode ? '' : res.contentUrl} srcDoc={res.pastedCode} className="w-full h-full border-none" title={res.title} />
-        <button onClick={() => window.close()} className="absolute top-6 right-6 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl hover:scale-105 transition-all text-slate-900 border border-slate-200"><X size={24} /></button>
+        <button onClick={() => {if(typeof window !== 'undefined') window.close()}} className="absolute top-6 right-6 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl hover:scale-105 transition-all text-slate-900 border border-slate-200"><X size={24} /></button>
       </div>
     );
   }
@@ -758,12 +779,6 @@ const App: React.FC = () => {
                   </div>
                 </div>
               ))}
-              {filteredBlogPosts.length === 0 && (
-                <div className="col-span-full py-24 text-center border-2 border-dashed border-slate-200 rounded-[40px] space-y-4">
-                  <Newspaper className="mx-auto text-slate-200" size={64} />
-                  <p className="text-slate-400 font-black uppercase text-xs">No hay artículos en esta categoría aún.</p>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -877,7 +892,7 @@ const App: React.FC = () => {
                     <h2 className="text-3xl font-black text-slate-900">{currentUser.name}</h2>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{currentUser.email}</p>
                   </div>
-                  <button onClick={() => { setCurrentUser(null); localStorage.removeItem('nogalespt_current_user'); navigateTo(AppView.Home); }} className="p-5 bg-red-50 text-red-500 rounded-3xl hover:bg-red-500 hover:text-white transition-all shadow-sm hover:shadow-md"><LogOut size={24} /></button>
+                  <button onClick={() => { setCurrentUser(null); if(typeof window !== 'undefined') localStorage.removeItem('nogalespt_current_user'); navigateTo(AppView.Home); }} className="p-5 bg-red-50 text-red-500 rounded-3xl hover:bg-red-500 hover:text-white transition-all shadow-sm hover:shadow-md"><LogOut size={24} /></button>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-2 bg-white p-12 rounded-[48px] border border-slate-100 shadow-sm">
@@ -989,7 +1004,7 @@ const App: React.FC = () => {
                     <button onClick={() => handleDeleteResource(selectedResource.id)} className="px-6 py-3 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} /> Eliminar</button>
                   </>
                 )}
-                <button onClick={() => copyToClipboard(window.location.href)} className="px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-2xl font-black text-[10px] uppercase shadow-sm hover:bg-slate-50 transition-colors">Compartir</button>
+                <button onClick={() => { if(typeof window !== 'undefined') copyToClipboard(window.location.href)}} className="px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-2xl font-black text-[10px] uppercase shadow-sm hover:bg-slate-50 transition-colors">Compartir</button>
               </div>
             </div>
 
@@ -1014,29 +1029,7 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="text-slate-700 leading-[1.8] text-xl prose prose-indigo max-w-none prose-img:rounded-[32px] prose-img:shadow-2xl prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter prose-headings:text-slate-900 prose-blockquote:border-indigo-600 prose-blockquote:bg-indigo-50/50 prose-blockquote:p-8 prose-blockquote:rounded-3xl prose-blockquote:not-italic prose-blockquote:font-bold prose-blockquote:text-indigo-900 prose-li:font-medium" dangerouslySetInnerHTML={{ __html: renderContentWithVideos(selectedResource.summary, cookieConsent) }} />
-                  
-                  <div className="mt-24 pt-16 border-t border-slate-50 flex flex-col items-center gap-8 bg-slate-50/50 rounded-[40px] p-12">
-                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Valora este conocimiento</p>
-                    <div className="flex justify-center gap-4">
-                      {[1, 2, 3, 4, 5].map(v => (
-                        <button key={v} onClick={async () => {
-                          const resToRate = resources.find(r => r.id === selectedResource.id);
-                          if (!resToRate) return;
-                          const currentCount = resToRate.ratingCount || 1;
-                          const currentRating = resToRate.rating || 0;
-                          const updatedRating = ((currentRating * currentCount) + v) / (currentCount + 1);
-                          const updatedResource: Resource = { ...resToRate, rating: Number(updatedRating.toFixed(1)), ratingCount: currentCount + 1 };
-                          setResources(prev => prev.map(r => r.id === selectedResource.id ? updatedResource : r));
-                          setSelectedResource(updatedResource);
-                          await dbService.saveResource(updatedResource);
-                        }} className="text-slate-200 hover:text-amber-500 transition-all hover:scale-125 transform">
-                          <Star size={48} fill={v <= Math.round(selectedResource.rating) ? 'currentColor' : 'none'} className={v <= Math.round(selectedResource.rating) ? 'text-amber-500 drop-shadow-lg' : 'text-slate-200'} />
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">({selectedResource.rating} / 5 basado en su impacto pedagógico)</p>
-                  </div>
+                  <div className="text-slate-700 leading-[1.8] text-xl prose prose-indigo max-w-none prose-img:rounded-[32px] prose-img:shadow-2xl" dangerouslySetInnerHTML={{ __html: renderContentWithVideos(selectedResource.summary, cookieConsent) }} />
                 </div>
               </article>
             ) : (
@@ -1052,7 +1045,7 @@ const App: React.FC = () => {
                   </div>
 
                   {(selectedResource.pastedCode || (selectedResource.contentUrl && selectedResource.contentUrl.trim() !== '')) && (
-                    <div ref={resourceContainerRef} className="aspect-video bg-slate-900 rounded-[40px] shadow-2xl overflow-hidden relative border-4 border-white ring-1 ring-slate-200">
+                    <div className="aspect-video bg-slate-900 rounded-[40px] shadow-2xl overflow-hidden relative border-4 border-white ring-1 ring-slate-200">
                       <iframe 
                         src={selectedResource.pastedCode ? '' : selectedResource.contentUrl} 
                         srcDoc={selectedResource.pastedCode} 
@@ -1070,27 +1063,6 @@ const App: React.FC = () => {
                     <div className="cursor-pointer group" onClick={() => { setViewingUserEmail(selectedResource.email); navigateTo(AppView.Profile, { user: selectedResource.email }); }}>
                       <img src={users.find(u => u.email === selectedResource.email)?.avatar || `https://ui-avatars.com/api/?name=${selectedResource.authorName}`} className="w-28 h-28 rounded-[36px] mx-auto shadow-xl object-cover border-4 border-slate-50 group-hover:scale-105 transition-transform" />
                       <h3 className="font-black text-slate-900 text-xl mt-6 group-hover:text-indigo-600 transition-colors">{selectedResource.authorName}</h3>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Autoría verificada</p>
-                    </div>
-                    <div className="flex flex-col gap-4 border-t border-slate-50 pt-8">
-                      <div className="flex justify-center gap-3">
-                        {[1, 2, 3, 4, 5].map(v => (
-                          <button key={v} onClick={async () => {
-                            const resToRate = resources.find(r => r.id === selectedResource.id);
-                            if (!resToRate) return;
-                            const currentCount = resToRate.ratingCount || 1;
-                            const currentRating = resToRate.rating || 0;
-                            const updatedRating = ((currentRating * currentCount) + v) / (currentCount + 1);
-                            const updatedResource: Resource = { ...resToRate, rating: Number(updatedRating.toFixed(1)), ratingCount: currentCount + 1 };
-                            setResources(prev => prev.map(r => r.id === selectedResource.id ? updatedResource : r));
-                            setSelectedResource(updatedResource);
-                            await dbService.saveResource(updatedResource);
-                          }} className="text-slate-100 hover:text-amber-500 transition-colors">
-                            <Star size={28} fill={v <= Math.round(selectedResource.rating) ? 'currentColor' : 'none'} className={v <= Math.round(selectedResource.rating) ? 'text-amber-500' : 'text-slate-200'} />
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Valora el material</p>
                     </div>
                     <a href={selectedResource.contentUrl} target="_blank" rel="noopener noreferrer" className="block w-full py-5 bg-slate-900 text-white rounded-[24px] font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition-colors active:scale-95">Ver Original Externo</a>
                   </div>
