@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Search, Upload, Star, Download, Info, User as UserIcon, Menu, X, FileUp, 
@@ -11,15 +10,14 @@ import {
   Twitter, AtSign, Send, MessageCircle, Trash2, Edit3, ShieldAlert, KeyRound,
   Layers3, Maximize2, Inbox, Copy, Check, LogIn, Type, List, ListOrdered, Bold, Italic, Heading1, Heading2,
   Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify, Quote, Table as TableIcon, 
-  Eraser, Hash, Type as TypeIcon, Palette, Indent, Outdent, Minus, Smile, Newspaper, ShieldCheck
+  Eraser, Hash, Palette, Indent, Outdent, Minus, Smile, Newspaper, ShieldCheck
 } from 'lucide-react';
 import { AppView, Resource, User as UserType, EducationalLevel, MainCategory, PrivateMessage } from './types';
 import { SUBJECTS_BY_LEVEL, COURSES_BY_LEVEL } from './constants';
 import { dbService } from './services/dbService';
 
-// --- DEFINICIÓN DE TIPOS PARA TS7015 ---
-type Levels = keyof typeof SUBJECTS_BY_LEVEL;
-type Courses = keyof typeof COURSES_BY_LEVEL;
+// --- SOLUCIÓN TÉCNICA TS7015 PARA NETLIFY ---
+type LevelKey = keyof typeof SUBJECTS_BY_LEVEL;
 
 // --- CONSTANTES DEL BLOG ---
 const BLOG_CATEGORIES = [
@@ -283,7 +281,7 @@ const App: React.FC = () => {
   const resourceContainerRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState({
-    title: '', summary: '', level: 'Infantil' as EducationalLevel, subject: 'Crecimiento en Armonía',
+    title: '', summary: '', level: 'Infantil' as LevelKey, subject: 'Crecimiento en Armonía',
     courses: [] as string[], resourceType: 'Material Didáctico', 
     mainCategory: 'PT-AL' as MainCategory, uploadMethod: 'file' as 'file' | 'code',
     externalUrl: '', pastedCode: '', kind: 'material' as 'material' | 'blog'
@@ -488,7 +486,7 @@ const App: React.FC = () => {
     setFormData({
       title: resource.title,
       summary: resource.summary,
-      level: resource.level,
+      level: resource.level as LevelKey,
       subject: resource.subject,
       courses: resource.courses,
       resourceType: resource.resourceType,
@@ -570,7 +568,7 @@ const App: React.FC = () => {
         authorName: currentUser.name,
         email: currentUser.email,
         summary: formData.summary,
-        level: formData.level,
+        level: formData.level as EducationalLevel,
         subject: formData.subject, 
         courses: formData.courses,
         resourceType: formData.resourceType,
@@ -630,7 +628,7 @@ const App: React.FC = () => {
   const resetForm = () => {
     setEditingResourceId(null);
     setFormData({
-      title: '', summary: '', level: 'Infantil', 
+      title: '', summary: '', level: 'Infantil' as LevelKey, 
       subject: 'Crecimiento en Armonía', courses: [], resourceType: 'Material Didáctico', 
       mainCategory: activeCategory, uploadMethod: 'file', externalUrl: '', pastedCode: '', kind: 'material'
     });
@@ -910,7 +908,7 @@ const App: React.FC = () => {
               <h2 className="text-3xl font-black text-slate-900 uppercase text-center mb-10">{editingResourceId ? 'Editar' : 'Crear'} <span className={themeClasses.text}>Contenido Docente</span></h2>
               <form onSubmit={handleUpload} className="space-y-10">
                 <div className="flex bg-slate-100 p-1.5 rounded-2xl w-fit mx-auto">
-                  <button type="button" onClick={() => setFormData({...formData, kind: 'material', subject: SUBJECTS_BY_LEVEL[formData.level as Levels][0]})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${formData.kind === 'material' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Material Didáctico</button>
+                  <button type="button" onClick={() => setFormData({...formData, kind: 'material', subject: SUBJECTS_BY_LEVEL[formData.level as LevelKey][0]})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${formData.kind === 'material' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Material Didáctico</button>
                   <button type="button" onClick={() => setFormData({...formData, kind: 'blog', subject: BLOG_CATEGORIES[1]})} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${formData.kind === 'blog' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Artículo de Blog</button>
                 </div>
 
@@ -927,15 +925,15 @@ const App: React.FC = () => {
                       <>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nivel Educativo</label>
-                          <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none cursor-pointer" value={formData.level} onChange={e => setFormData({...formData, level: e.target.value as EducationalLevel, courses: [], subject: SUBJECTS_BY_LEVEL[e.target.value as Levels][0]})}>{Object.keys(SUBJECTS_BY_LEVEL).map(l => <option key={l} value={l}>{l}</option>)}</select>
+                          <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none cursor-pointer" value={formData.level} onChange={e => setFormData({...formData, level: e.target.value as LevelKey, courses: [], subject: SUBJECTS_BY_LEVEL[e.target.value as LevelKey][0]})}>{Object.keys(SUBJECTS_BY_LEVEL).map(l => <option key={l} value={l}>{l}</option>)}</select>
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Materia / Área</label>
-                          <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none cursor-pointer" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})}>{SUBJECTS_BY_LEVEL[formData.level as Levels]?.map(s => <option key={s} value={s}>{s}</option>)}</select>
+                          <select className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none cursor-pointer" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})}>{SUBJECTS_BY_LEVEL[formData.level as LevelKey]?.map(s => <option key={s} value={s}>{s}</option>)}</select>
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Cursos Relacionados</label>
-                          <div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-2xl border border-slate-100">{COURSES_BY_LEVEL[formData.level as Courses]?.map(course => (<button key={course} type="button" onClick={() => handleCourseToggle(course)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${formData.courses.includes(course) ? `${themeClasses.bg} border-transparent text-white shadow-md` : 'bg-white border-slate-100 text-slate-400 hover:border-indigo-200'}`}>{course}</button>))}</div>
+                          <div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-2xl border border-slate-100">{COURSES_BY_LEVEL[formData.level as LevelKey]?.map(course => (<button key={course} type="button" onClick={() => handleCourseToggle(course)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${formData.courses.includes(course) ? `${themeClasses.bg} border-transparent text-white shadow-md` : 'bg-white border-slate-100 text-slate-400 hover:border-indigo-200'}`}>{course}</button>))}</div>
                         </div>
                       </>
                     ) : (
