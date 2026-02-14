@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { Resource, User, PrivateMessage } from '../types';
 import { INITIAL_RESOURCES, INITIAL_USERS } from '../constants';
@@ -9,20 +10,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export const dbService = {
   // --- Autenticación ---
-  async signInWithGoogle() {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: 'https://www.nogalespt.com',
-      },
-    });
-    if (error) throw error;
-    return data;
-  },
-
   async resetPassword(email: string) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://www.nogalespt.com',
+      redirectTo: window.location.origin,
     });
     if (error) throw error;
   },
