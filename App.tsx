@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { AppView, Resource, User as UserType, EducationalLevel, MainCategory, PrivateMessage } from './types';
 import { SUBJECTS_BY_LEVEL, COURSES_BY_LEVEL } from './constants';
-import { dbService } from './services/dbService';
+import { dbService, supabase } from './services/dbService'; // Importamos supabase también
 
 // --- SOLUCIÓN TÉCNICA TS7015 RADICAL ---
 type SafeAny = any;
@@ -362,6 +362,48 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // --- DETECTOR DE CAMBIO DE ESTADO DE AUTENTICACIÓN (GOOGLE) ---
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const uEmail = session.user.email || '';
+        const usersData = await dbService.getUsers();
+        let user = usersData.find(u => u.email === uEmail);
+        
+        if (!user) {
+          // Si el usuario entra por primera vez con Google, lo registramos en nuestra base de datos
+          user = {
+            email: uEmail,
+            name: session.user.user_metadata?.full_name || uEmail.split('@')[0],
+            avatar: session.user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${uEmail}&background=random`
+          };
+          await dbService.saveUser(user);
+        }
+        
+        setCurrentUser(user);
+        setProfileForm(user);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('nogalespt_current_user', JSON.stringify(user));
+        }
+        // Si estábamos en la vista Account, volvemos a Home tras el login exitoso
+        if (view === AppView.Account) {
+          setView(AppView.Home);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [view]);
+
+  const handleGoogleLogin = async () => {
+    setAuthError(null);
+    try {
+      await dbService.signInWithGoogle();
+    } catch (err: any) {
+      setAuthError("Error al conectar con Google: " + err.message);
+    }
+  };
+
   const navigateTo = (newView: AppView, params: Record<string, string> = {}) => {
     if (newView === AppView.Upload && !currentUser) {
       setAuthError("Debes registrarte para compartir contenido.");
@@ -527,13 +569,15 @@ const App: React.FC = () => {
   };
 
   const teacherRankings = useMemo(() => {
-    const levels: EducationalLevel[] = ['Infantil', 'Primaria', 'Secundaria', 'Bachillerato'];
     const rankings: Record<string, any[]> = {};
-    [...levels, 'PT-AL'].forEach(level => {
+    const levels: string[] = ['Infantil', 'Primaria', 'Secundaria', 'Bachillerato', 'PT-AL'];
+    
+    levels.forEach(level => {
       const levelTeachers: Record<string, any> = {};
       const levelResources = resources.filter(r => 
         level === 'PT-AL' ? r.mainCategory === 'PT-AL' : r.level === level && r.mainCategory === 'General'
       );
+      
       levelResources.forEach(res => {
         const user = users.find(u => u.email === res.email) || { 
           email: res.email, 
@@ -545,7 +589,8 @@ const App: React.FC = () => {
         levelTeachers[res.email].totalRating += res.rating || 0;
         levelTeachers[res.email].ratedResourcesCount += 1;
       });
-      (rankings as SafeAny)[level] = Object.values(levelTeachers).map((t: any) => {
+
+      rankings[level] = Object.values(levelTeachers).map((t: any) => {
         const avg = t.ratedResourcesCount > 0 ? t.totalRating / t.ratedResourcesCount : 0;
         const score = (t.count * 10) + (avg * 5);
         return { ...t, avgRating: avg, score };
@@ -875,6 +920,28 @@ const App: React.FC = () => {
             {!currentUser ? (
               <div className="max-w-md mx-auto bg-white p-12 rounded-[40px] shadow-2xl border border-slate-100 text-center space-y-8 animate-in zoom-in duration-300">
                 <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Área de <span className={themeClasses.text}>Docentes</span></h2>
+                
+                {/* BOTÓN GOOGLE OFICIAL INTEGRADO */}
+                <button 
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  className="w-full py-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center gap-3 hover:bg-slate-50 hover:shadow-md transition-all active:scale-95 group"
+                >
+                  <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                  </svg>
+                  <span className="text-[11px] font-black uppercase text-slate-700 tracking-wider">Entrar con Google</span>
+                </button>
+
+                <div className="flex items-center gap-4 my-6">
+                  <div className="h-px bg-slate-100 flex-1"></div>
+                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">o con email</span>
+                  <div className="h-px bg-slate-100 flex-1"></div>
+                </div>
+
                 <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4 text-left">
                   {isRegistering && <input required type="text" value={registerName} onChange={e => setRegisterName(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all" placeholder="Tu nombre" />}
                   <input required type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all" placeholder="Email" />
@@ -892,7 +959,7 @@ const App: React.FC = () => {
                     <h2 className="text-3xl font-black text-slate-900">{currentUser.name}</h2>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{currentUser.email}</p>
                   </div>
-                  <button onClick={() => { setCurrentUser(null); if(typeof window !== 'undefined') localStorage.removeItem('nogalespt_current_user'); navigateTo(AppView.Home); }} className="p-5 bg-red-50 text-red-500 rounded-3xl hover:bg-red-500 hover:text-white transition-all shadow-sm hover:shadow-md"><LogOut size={24} /></button>
+                  <button onClick={async () => { await dbService.signOut(); setCurrentUser(null); if(typeof window !== 'undefined') localStorage.removeItem('nogalespt_current_user'); navigateTo(AppView.Home); }} className="p-5 bg-red-50 text-red-500 rounded-3xl hover:bg-red-500 hover:text-white transition-all shadow-sm hover:shadow-md"><LogOut size={24} /></button>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-2 bg-white p-12 rounded-[48px] border border-slate-100 shadow-sm">
@@ -1081,7 +1148,6 @@ const App: React.FC = () => {
         <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.4em]">© 2025 • Blog y Repositorio Docente Colaborativo para Andalucía</p>
       </footer>
 
-      {/* --- BANNER DE COOKIES (RGPD) --- */}
       {showCookieBanner && (
         <div className="fixed bottom-0 left-0 right-0 z-[9999] p-4 md:p-8 animate-in slide-in-from-bottom-full duration-500">
           <div className="max-w-7xl mx-auto bg-slate-900 text-white rounded-[32px] p-6 md:p-10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] border border-slate-800 flex flex-col md:flex-row items-center gap-8 backdrop-blur-md bg-slate-900/95">
@@ -1091,22 +1157,12 @@ const App: React.FC = () => {
             <div className="flex-1 space-y-2 text-center md:text-left">
               <h4 className="text-lg font-black uppercase tracking-tight">Tu privacidad es fundamental</h4>
               <p className="text-slate-400 text-sm font-medium leading-relaxed max-w-2xl">
-                Utilizamos cookies propias y de terceros (como Google Tag Manager) para mejorar tu experiencia docente, analizar el tráfico y mostrar contenido multimedia de YouTube. Al aceptar, permites que NOGALESPT sea más inteligente para ti.
+                Utilizamos cookies propias y de terceros para mejorar tu experiencia docente, analizar el tráfico y mostrar contenido multimedia.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-              <button 
-                onClick={handleRejectCookies}
-                className="px-8 py-4 bg-slate-800 text-slate-300 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-all border border-slate-700 active:scale-95"
-              >
-                Rechazar
-              </button>
-              <button 
-                onClick={handleAcceptCookies}
-                className="px-10 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 hover:bg-indigo-500 hover:scale-105 transition-all active:scale-95"
-              >
-                Aceptar Cookies
-              </button>
+              <button onClick={handleRejectCookies} className="px-8 py-4 bg-slate-800 text-slate-300 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-all active:scale-95">Rechazar</button>
+              <button onClick={handleAcceptCookies} className="px-10 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 hover:bg-indigo-500 transition-all active:scale-95">Aceptar Cookies</button>
             </div>
           </div>
         </div>
