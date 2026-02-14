@@ -13,7 +13,7 @@ export const dbService = {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        redirectTo: 'https://www.nogalespt.com',
       },
     });
     if (error) throw error;
@@ -22,7 +22,7 @@ export const dbService = {
 
   async resetPassword(email: string) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
+      redirectTo: 'https://www.nogalespt.com',
     });
     if (error) throw error;
   },
