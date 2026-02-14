@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { AppView, Resource, User as UserType, EducationalLevel, MainCategory, PrivateMessage } from './types';
 import { SUBJECTS_BY_LEVEL, COURSES_BY_LEVEL } from './constants';
-import { dbService, supabase } from './services/dbService'; // Importamos supabase también
+import { dbService, supabase } from './services/dbService';
 
 // --- SOLUCIÓN TÉCNICA TS7015 RADICAL ---
 type SafeAny = any;
@@ -346,7 +346,7 @@ const App: React.FC = () => {
     setShowCookieBanner(false);
   };
 
-  // Protección de URL Params (Movido a estado de efecto seguro)
+  // Protección de URL Params
   const [urlParamsState, setUrlParamsState] = useState<{isStandalone: boolean, standaloneId: string | null}>({
     isStandalone: false,
     standaloneId: null
@@ -385,15 +385,14 @@ const App: React.FC = () => {
         if (typeof window !== 'undefined') {
           localStorage.setItem('nogalespt_current_user', JSON.stringify(user));
         }
-        // Si estábamos en la vista Account, volvemos a Home tras el login exitoso
-        if (view === AppView.Account) {
-          setView(AppView.Home);
-        }
+        
+        // ELIMINADA REDIRECCIÓN FORZADA A HOME: 
+        // Permitimos que el usuario permanezca en su vista actual (ej. Perfil) tras loguearse.
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [view]);
+  }, []); // Dependencias vacías para evitar bucles de navegación
 
   const handleGoogleLogin = async () => {
     setAuthError(null);
@@ -660,7 +659,7 @@ const App: React.FC = () => {
       if (typeof window !== 'undefined') {
         localStorage.setItem('nogalespt_current_user', JSON.stringify(user));
       }
-      navigateTo(AppView.Home);
+      // Se elimina navigateTo(AppView.Home) para permitir al usuario ver su perfil tras el login.
     } else { setAuthError("Credenciales incorrectas."); }
   };
 
@@ -678,7 +677,7 @@ const App: React.FC = () => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('nogalespt_current_user', JSON.stringify(newUser));
     }
-    navigateTo(AppView.Home);
+    // Se elimina navigateTo(AppView.Home) para permitir al usuario ver su perfil tras el registro.
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -921,7 +920,6 @@ const App: React.FC = () => {
               <div className="max-w-md mx-auto bg-white p-12 rounded-[40px] shadow-2xl border border-slate-100 text-center space-y-8 animate-in zoom-in duration-300">
                 <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Área de <span className={themeClasses.text}>Docentes</span></h2>
                 
-                {/* BOTÓN GOOGLE OFICIAL INTEGRADO */}
                 <button 
                   type="button"
                   onClick={handleGoogleLogin}
@@ -967,18 +965,18 @@ const App: React.FC = () => {
                     <form onSubmit={handleUpdateProfile} className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <input type="text" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold focus:ring-2 focus:ring-indigo-100 outline-none" placeholder="Nombre" />
-                        <input type="text" value={profileForm.lastName} onChange={e => setProfileForm({...profileForm, lastName: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold focus:ring-2 focus:ring-indigo-100 outline-none" placeholder="Apellidos" />
+                        <input type="text" value={profileForm.lastName || ''} onChange={e => setProfileForm({...profileForm, lastName: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold focus:ring-2 focus:ring-indigo-100 outline-none" placeholder="Apellidos" />
                       </div>
-                      <textarea value={profileForm.bio} onChange={e => setProfileForm({...profileForm, bio: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold h-32 focus:ring-2 focus:ring-indigo-100 outline-none resize-none" placeholder="Breve biografía..." />
+                      <textarea value={profileForm.bio || ''} onChange={e => setProfileForm({...profileForm, bio: e.target.value})} className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold h-32 focus:ring-2 focus:ring-indigo-100 outline-none resize-none" placeholder="Breve biografía..." />
                       <button type="submit" className={`${themeClasses.bg} w-full py-5 rounded-3xl text-white font-black uppercase text-xs tracking-widest shadow-xl hover:shadow-2xl transition-all flex items-center justify-center gap-2`}><Save size={18}/> Guardar Cambios</button>
                     </form>
                   </div>
                   <div className="bg-white p-12 rounded-[48px] border border-slate-100 shadow-sm space-y-8">
                     <h3 className="text-xs font-black uppercase text-slate-400 mb-4 tracking-widest flex items-center gap-2"><Share2 size={18} className={themeClasses.text}/> Presencia Social</h3>
                     <div className="space-y-5">
-                      <div className="relative"><Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.instagram} onChange={e => setProfileForm({...profileForm, instagram: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm outline-none focus:ring-2 focus:ring-pink-100" placeholder="Instagram (sin @)" /></div>
-                      <div className="relative"><Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.website} onChange={e => setProfileForm({...profileForm, website: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-100" placeholder="Web / Portfolio" /></div>
-                      <div className="relative"><Linkedin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.linkedin} onChange={e => setProfileForm({...profileForm, linkedin: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm outline-none focus:ring-2 focus:ring-blue-100" placeholder="LinkedIn" /></div>
+                      <div className="relative"><Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.instagram || ''} onChange={e => setProfileForm({...profileForm, instagram: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm outline-none focus:ring-2 focus:ring-pink-100" placeholder="Instagram (sin @)" /></div>
+                      <div className="relative"><Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.website || ''} onChange={e => setProfileForm({...profileForm, website: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-100" placeholder="Web / Portfolio" /></div>
+                      <div className="relative"><Linkedin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input type="text" value={profileForm.linkedin || ''} onChange={e => setProfileForm({...profileForm, linkedin: e.target.value})} className="w-full p-5 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-sm outline-none focus:ring-2 focus:ring-blue-100" placeholder="LinkedIn" /></div>
                     </div>
                   </div>
                 </div>
