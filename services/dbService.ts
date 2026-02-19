@@ -17,6 +17,19 @@ export const dbService = {
     if (error) throw error;
   },
 
+  /**
+   * Inicia sesión con Google usando OAuth de Supabase.
+   */
+  async signInWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) throw error;
+  },
+
   async signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
