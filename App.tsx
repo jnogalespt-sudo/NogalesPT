@@ -290,7 +290,7 @@ const App: React.FC = () => {
     courses: [] as string[], resourceType: 'Material Didáctico', 
     mainCategory: 'PT-AL' as MainCategory, uploadMethod: 'file' as 'file' | 'code',
     externalUrl: '', pastedCode: '', kind: 'material' as 'material' | 'blog',
-    neae: '', desarrolloArea: ''
+    neae: '', desarrolloArea: '', thumbnailUrl: ''
   });
 
   const [profileForm, setProfileForm] = useState<UserType>({
@@ -561,7 +561,8 @@ const App: React.FC = () => {
       pastedCode: resource.pastedCode || '',
       kind: resource.kind || 'material',
       neae: resource.neae || '',
-      desarrolloArea: resource.desarrolloArea || ''
+      desarrolloArea: resource.desarrolloArea || '',
+      thumbnailUrl: resource.thumbnail && !resource.thumbnail.includes('picsum.photos') ? resource.thumbnail : ''
     });
     navigateTo(AppView.Upload);
   };
@@ -648,7 +649,7 @@ const App: React.FC = () => {
         mainCategory: activeCategory,
         rating: editingResourceId ? resources.find(r => r.id === editingResourceId)?.rating || 0 : 0,
         uploadDate: new Date().toLocaleDateString(),
-        thumbnail: `https://picsum.photos/seed/${Date.now()}/600/400`,
+        thumbnail: formData.thumbnailUrl.trim() !== '' ? formData.thumbnailUrl.trim() : `https://picsum.photos/seed/${Date.now()}/600/400`,
         contentUrl: cleanUrl || '',
         pastedCode: formData.uploadMethod === 'code' ? formData.pastedCode : undefined,
         kind: formData.kind,
@@ -710,7 +711,7 @@ const App: React.FC = () => {
       subject: (SUBJECTS_BY_LEVEL as SafeAny)['Infantil'][0], 
       courses: [], resourceType: 'Material Didáctico', 
       mainCategory: activeCategory, uploadMethod: 'file', externalUrl: '', pastedCode: '', kind: 'material',
-      neae: '', desarrolloArea: ''
+      neae: '', desarrolloArea: '', thumbnailUrl: ''
     });
   };
 
@@ -1041,6 +1042,7 @@ const App: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <input required type="text" placeholder="Escribe un título impactante..." className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
+                    <input type="url" placeholder="URL de la imagen de portada (opcional)..." className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all" value={formData.thumbnailUrl} onChange={e => setFormData({...formData, thumbnailUrl: e.target.value})} />
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Contenido principal ({formData.kind === 'blog' ? 'Cuerpo del post' : 'Descripción'})</label>
                       <RichTextEditor value={formData.summary} onChange={(val) => setFormData({...formData, summary: val})} />
