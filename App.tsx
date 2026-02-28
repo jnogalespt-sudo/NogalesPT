@@ -369,7 +369,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
+      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
         const uEmail = session.user.email || '';
         const usersData = await dbService.getUsers();
         let user = usersData.find(u => u.email === uEmail);
@@ -387,6 +387,11 @@ const App: React.FC = () => {
         setProfileForm(user);
         if (typeof window !== 'undefined') {
           localStorage.setItem('nogalespt_current_user', JSON.stringify(user));
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('nogalespt_current_user');
         }
       }
     });
