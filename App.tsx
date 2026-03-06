@@ -368,26 +368,84 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
-        const uEmail = session.user.email || '';
-        const usersData = await dbService.getUsers();
-        let user = usersData.find(u => u.email === uEmail);
+    let isMounted = true;
+    let initialLoadDone = false;
+
+    const loadDataAndAuth = async (session: any) => {
+      try {
+        const [resData, usersData] = await Promise.all([
+          dbService.getResources().catch(() => []),
+          dbService.getUsers().catch(() => [])
+        ]);
         
-        if (!user) {
-          user = {
-            email: uEmail,
-            name: session.user.user_metadata?.full_name || uEmail.split('@')[0],
-            avatar: session.user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${uEmail}&background=random`
-          };
-          await dbService.saveUser(user);
-        }
+        if (!isMounted) return;
         
-        setCurrentUser(user);
-        setProfileForm(user);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('nogalespt_current_user', JSON.stringify(user));
+        setResources(resData || []);
+        setUsers(usersData || []);
+
+        if (session?.user) {
+          const uEmail = session.user.email || '';
+          let user = usersData.find(u => u.email === uEmail);
+          
+          if (!user) {
+            user = {
+              email: uEmail,
+              name: session.user.user_metadata?.full_name || uEmail.split('@')[0],
+              avatar: session.user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${uEmail}&background=random`
+            };
+            await dbService.saveUser(user);
+            if (isMounted) {
+              setUsers(prev => {
+                if (!prev.find(u => u.email === uEmail)) {
+                  return [...prev, user!];
+                }
+                return prev;
+              });
+            }
+          }
+          
+          if (isMounted) {
+            setCurrentUser(user);
+            setProfileForm(user);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('nogalespt_current_user', JSON.stringify(user));
+            }
+          }
+        } else {
+          if (isMounted) {
+            setCurrentUser(null);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('nogalespt_current_user');
+            }
+          }
         }
+
+        if (!initialLoadDone && typeof window !== 'undefined' && isMounted) {
+          const params = new URLSearchParams(window.location.search);
+          const viewParam = params.get('view') as AppView;
+          const idParam = params.get('id');
+
+          if (viewParam) {
+            setView(viewParam);
+            if (viewParam === AppView.Detail && idParam) {
+              const found = resData.find((r: Resource) => r.id === idParam);
+              if (found) setSelectedResource(found);
+            }
+          }
+          initialLoadDone = true;
+        }
+      } catch (error) {
+        console.error("Error cargando app:", error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        loadDataAndAuth(session);
       } else if (event === 'SIGNED_OUT') {
         setCurrentUser(null);
         if (typeof window !== 'undefined') {
@@ -396,7 +454,10 @@ const App: React.FC = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleGoogleLogin = async () => {
@@ -494,46 +555,7 @@ const App: React.FC = () => {
     return url;
   };
 
-  useEffect(() => {
-    const initApp = async () => {
-      try {
-        const [resData, usersData] = await Promise.all([
-          dbService.getResources().catch(() => []),
-          dbService.getUsers().catch(() => [])
-        ]);
-        setResources(resData || []);
-        setUsers(usersData || []);
-        
-        if (typeof window !== 'undefined') {
-          const stored = localStorage.getItem('nogalespt_current_user');
-          if (stored) {
-            const parsedUser = JSON.parse(stored);
-            if (parsedUser) {
-              setCurrentUser(parsedUser);
-              setProfileForm(parsedUser);
-            }
-          }
 
-          const params = new URLSearchParams(window.location.search);
-          const viewParam = params.get('view') as AppView;
-          const idParam = params.get('id');
-
-          if (viewParam) {
-            setView(viewParam);
-            if (viewParam === AppView.Detail && idParam) {
-              const found = resData.find((r: Resource) => r.id === idParam);
-              if (found) setSelectedResource(found);
-            }
-          }
-        }
-      } catch (error) { 
-        console.error("Error cargando app:", error); 
-      } finally { 
-        setIsLoading(false); 
-      }
-    };
-    initApp();
-  }, []);
 
   const copyToClipboard = (text: string) => {
     if (typeof window !== 'undefined' && navigator?.clipboard) {
