@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+Disallow: /*?view=Upload*
+Disallow: /*?view=Account*
+Disallow: /*?view=Profile*
+Disallow: /*?standalone=true*
+
+Allow: /*?view=Detail*
+Allow: /*?view=Blog*
+Allow: /*?view=Explore*
+
+Sitemap: https://nogalespt.com/sitemap.xml
