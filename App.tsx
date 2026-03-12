@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, Suspense, lazy } from 'react';
 import { 
   Search, Upload, Star, Download, Info, User as UserIcon, Menu, X, FileUp, 
   FileText, PlayCircle, Book, ArrowLeft, Settings, Save, UserCircle, 
@@ -14,48 +14,28 @@ import {
   Eraser, Hash, Palette, Indent, Outdent, Minus, Smile, Newspaper, ShieldCheck
 } from 'lucide-react';
 import { AppView, Resource, User as UserType, EducationalLevel, MainCategory, PrivateMessage } from './types';
-import { SUBJECTS_BY_LEVEL, COURSES_BY_LEVEL } from './constants';
+import { SUBJECTS_BY_LEVEL, COURSES_BY_LEVEL, NEAE_OPTIONS, DESARROLLO_AREAS, BLOG_CATEGORIES, GTM_ID, SafeAny } from './constants';
 import { dbService, supabase } from './services/dbService';
 
 import RichTextEditor from './components/RichTextEditor';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import ResourceDetail from './views/ResourceDetail';
-import BlogView from './views/BlogView';
-import { ExploreFilters } from './components/ExploreFilters';
-import { ExploreGrid } from './components/ExploreGrid';
-import { UploadView } from './views/UploadView';
-import { AccountView } from './views/AccountView';
-import { ProfileView } from './views/ProfileView';
-import { TopDocentesView } from './views/TopDocentesView';
+const ResourceDetail = lazy(() => import('./views/ResourceDetail'));
+const BlogView = lazy(() => import('./views/BlogView'));
+const ExploreFilters = lazy(() => import('./components/ExploreFilters').then(module => ({ default: module.ExploreFilters })));
+const ExploreGrid = lazy(() => import('./components/ExploreGrid').then(module => ({ default: module.ExploreGrid })));
+const UploadView = lazy(() => import('./views/UploadView').then(module => ({ default: module.UploadView })));
+const AccountView = lazy(() => import('./views/AccountView').then(module => ({ default: module.AccountView })));
+const ProfileView = lazy(() => import('./views/ProfileView').then(module => ({ default: module.ProfileView })));
+const TopDocentesView = lazy(() => import('./views/TopDocentesView').then(module => ({ default: module.TopDocentesView })));
 import { stripHtml, renderContentWithVideos } from './utils/helpers';
-
-// --- CONSTANTES NEAE Y DESARROLLO ---
-const NEAE_OPTIONS = ['Dislexia', 'TDAH', 'Autismo (TEA)', 'Trastorno Específico del Lenguaje (TEL)', 'Discapacidad Intelectual', 'Trastorno Grave del Desarrollo', 'Discapacidad Visual', 'Discapacidad Auditiva', 'Discapacidad física', 'Altas Capacidades Intelectuales', 'Educación Compensatoria', 'Trastornos Graves de Conducta'];
-const DESARROLLO_AREAS = ['Cognitiva', 'comunicativa', 'social y emocional', 'psicomotor', 'motor'];
-
-// --- SOLUCIÓN TÉCNICA TS7015 RADICAL ---
-type SafeAny = any;
-
-// --- CONSTANTES DEL BLOG ---
-const BLOG_CATEGORIES = [
-  'Todo', 
-  'Dislexia', 
-  'Autismo (TEA)', 
-  'TEL', 
-  'TDAH', 
-  'Desarrollo Comunicativo-lingüítico', 
-  'Desarrollo Cognitivo', 
-  'Desarrollo Social', 
-  'DUA', 
-  'Pedagogía Terapéutica (PT)', 
-  'Audición y Lenguaje (AL)'
-];
-
-// --- CONFIGURACIÓN TÉCNICA ---
-const GTM_ID = 'GTM-PCMTTC42';
+import { useTeacherRankings } from './hooks/useTeacherRankings';
+import { useSeoManager } from './hooks/useSeoManager';
+import { useCookieManager } from './hooks/useCookieManager';
 
 const App: React.FC = () => {
+  const { cookieConsent, showCookieBanner, handleAcceptCookies, handleRejectCookies } = useCookieManager();
+  
   const [resources, setResources] = useState<Resource[]>([]);
   const [users, setUsers] = useState<UserType[]>([]);
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
@@ -63,10 +43,6 @@ const App: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
-
-  // --- ESTADO DE COOKIES Y RGPD ---
-  const [cookieConsent, setCookieConsent] = useState<boolean | null>(null);
-  const [showCookieBanner, setShowCookieBanner] = useState(false);
 
   const [view, setView] = useState<AppView>(AppView.Home);
   const [activeCategory, setActiveCategory] = useState<MainCategory>('PT-AL');
@@ -99,60 +75,6 @@ const App: React.FC = () => {
     email: '', name: '', lastName: '', bio: '',
     instagram: '', linkedin: '', tiktok: '', twitter: '', website: ''
   });
-
-  // --- LÓGICA DE GTM (PROTEGIDA) ---
-  const initGTM = () => {
-    if (typeof window === 'undefined' || (window as any).gtmInitialized || cookieConsent !== true) return;
-    
-    (function(w: any, d: any, s: any, l: any, i: any){
-      w[l] = w[l] || [];
-      w[l].push({'gtm.start': new Date().getTime(), event:'gtm.js'});
-      var f = d.getElementsByTagName(s)[0],
-      j = d.createElement(s), dl = l != 'dataLayer' ? '&l='+l : '';
-      j.async = true;
-      j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
-      if (f && f.parentNode) f.parentNode.insertBefore(j, f);
-    })(window, document, 'script', 'dataLayer', GTM_ID);
-    
-    (window as any).gtmInitialized = true;
-  };
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const savedConsent = localStorage.getItem('nogalespt_cookie_consent');
-    if (savedConsent === 'accepted') {
-      setCookieConsent(true);
-    } else if (savedConsent === 'rejected') {
-      setCookieConsent(false);
-    } else {
-      setShowCookieBanner(true);
-    }
-
-    const handleOpenBanner = () => setShowCookieBanner(true);
-    window.addEventListener('open-cookie-banner', handleOpenBanner);
-    return () => window.removeEventListener('open-cookie-banner', handleOpenBanner);
-  }, []);
-
-  useEffect(() => {
-    if (cookieConsent === true) {
-      initGTM();
-    }
-  }, [cookieConsent]);
-
-  const handleAcceptCookies = () => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('nogalespt_cookie_consent', 'accepted');
-    setCookieConsent(true);
-    setShowCookieBanner(false);
-  };
-
-  const handleRejectCookies = () => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('nogalespt_cookie_consent', 'rejected');
-    setCookieConsent(false);
-    setShowCookieBanner(false);
-  };
 
   const [urlParamsState, setUrlParamsState] = useState<{isStandalone: boolean, standaloneId: string | null}>({
     isStandalone: false,
@@ -309,46 +231,7 @@ const App: React.FC = () => {
   const activeProfile = useMemo(() => users.find(u => u.email === viewingUserEmail), [users, viewingUserEmail]);
   const profileResources = useMemo(() => resources.filter(r => r.email === viewingUserEmail), [resources, viewingUserEmail]);
 
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-
-    let title = "NOGALESPT - Repositorio Educativo Colaborativo";
-    let description = "Materiales de calidad, interactivos y adaptados para maestros de PT y AL en Andalucía. Repositorio docente colaborativo.";
-    let image = "https://nogalespt.com/logo.png";
-
-    if (view === AppView.Detail && selectedResource) {
-      title = `${selectedResource.title} | NogalesPT`;
-      description = stripHtml(selectedResource.summary);
-      if (selectedResource.thumbnail) image = selectedResource.thumbnail;
-    } else if (view === AppView.Blog) {
-      title = activeBlogCategory === 'Todo' ? "Blog Educativo | NOGALESPT" : `Estrategias sobre ${activeBlogCategory} | NOGALESPT`;
-    }
-
-    document.title = title;
-    
-    const updateMeta = (name: string, content: string, attr: 'name' | 'property' = 'name') => {
-      let el = document.querySelector(`meta[${attr}="${name}"]`);
-      if (!el) {
-        el = document.createElement('meta');
-        el.setAttribute(attr, name);
-        document.head.appendChild(el);
-      }
-      el.setAttribute('content', content);
-    };
-
-    updateMeta('title', title);
-    updateMeta('description', description);
-    updateMeta('og:title', title, 'property');
-    updateMeta('og:description', description, 'property');
-    updateMeta('og:image', image, 'property');
-    updateMeta('twitter:title', title);
-    updateMeta('twitter:description', description);
-    updateMeta('twitter:image', image);
-    
-    if (typeof window !== 'undefined') {
-      updateMeta('og:url', window.location.href, 'property');
-    }
-  }, [view, selectedResource, activeBlogCategory, activeCategory]);
+  useSeoManager(view, selectedResource, activeBlogCategory, activeCategory, stripHtml);
 
   const cleanGoogleDriveUrl = (url: string) => {
     if (url.includes('drive.google.com')) {
@@ -406,36 +289,7 @@ const App: React.FC = () => {
     } catch (err) { console.error(err); }
   };
 
-  const teacherRankings = useMemo(() => {
-    const rankings: Record<string, any[]> = {};
-    const levels: string[] = ['Infantil', 'Primaria', 'Secundaria', 'Bachillerato', 'PT-AL'];
-    
-    levels.forEach(level => {
-      const levelTeachers: Record<string, any> = {};
-      const levelResources = resources.filter(r => 
-        level === 'PT-AL' ? r.mainCategory === 'PT-AL' : r.level === level && r.mainCategory === 'General'
-      );
-      
-      levelResources.forEach(res => {
-        const user = users.find(u => u.email === res.email) || { 
-          email: res.email, 
-          name: res.authorName || 'Docente', 
-          avatar: `https://ui-avatars.com/api/?name=${res.authorName || 'Docente'}&background=random` 
-        };
-        if (!levelTeachers[res.email]) levelTeachers[res.email] = { user, count: 0, totalRating: 0, ratedResourcesCount: 0 };
-        levelTeachers[res.email].count += 1;
-        levelTeachers[res.email].totalRating += res.rating || 0;
-        levelTeachers[res.email].ratedResourcesCount += 1;
-      });
-
-      rankings[level] = Object.values(levelTeachers).map((t: any) => {
-        const avg = t.ratedResourcesCount > 0 ? t.totalRating / t.ratedResourcesCount : 0;
-        const score = (t.count * 10) + (avg * 5);
-        return { ...t, avgRating: avg, score };
-      }).sort((a, b) => b.score - a.score).slice(0, 5);
-    });
-    return rankings;
-  }, [resources, users]);
+  const teacherRankings = useTeacherRankings(resources, users);
 
   const filteredResources = useMemo(() => {
     return resources.filter(res => {
@@ -590,132 +444,134 @@ const App: React.FC = () => {
       )}
 
       <main className="flex-1 max-w-7xl mx-auto px-4 py-8 w-full">
-        {view === AppView.Home && (
-          <div className="py-24 text-center space-y-8 max-w-3xl mx-auto">
-            <h1 className="text-5xl md:text-7xl font-black text-slate-900 leading-[1.05]">Repositorio <span className={themeClasses.text}>Colaborativo</span> para Docentes</h1>
-            <p className="text-lg text-slate-500 font-medium">Materiales de calidad, interactivos y adaptados para maestros de PT y AL.</p>
-            <button onClick={() => navigateTo(AppView.Explore)} className={`${themeClasses.bg} text-white px-10 py-5 rounded-2xl font-black shadow-xl uppercase text-xs mx-auto hover:scale-105 transition-transform`}>Explorar Ahora</button>
-          </div>
-        )}
+        <Suspense fallback={<div className="flex py-24 items-center justify-center"><div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div></div>}>
+          {view === AppView.Home && (
+            <div className="py-24 text-center space-y-8 max-w-3xl mx-auto">
+              <h1 className="text-5xl md:text-7xl font-black text-slate-900 leading-[1.05]">Repositorio <span className={themeClasses.text}>Colaborativo</span> para Docentes</h1>
+              <p className="text-lg text-slate-500 font-medium">Materiales de calidad, interactivos y adaptados para maestros de PT y AL.</p>
+              <button onClick={() => navigateTo(AppView.Explore)} className={`${themeClasses.bg} text-white px-10 py-5 rounded-2xl font-black shadow-xl uppercase text-xs mx-auto hover:scale-105 transition-transform`}>Explorar Ahora</button>
+            </div>
+          )}
 
-        {view === AppView.Blog && (
-          <BlogView 
-            filteredBlogPosts={filteredBlogPosts}
-            activeBlogCategory={activeBlogCategory}
-            handleBlogCategoryClick={handleBlogCategoryClick}
-            setSelectedResource={setSelectedResource}
-            navigateTo={navigateTo}
-            BLOG_CATEGORIES={BLOG_CATEGORIES}
-            stripHtml={stripHtml}
-          />
-        )}
-
-        {view === AppView.Explore && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <ExploreFilters
-              activeCategory={activeCategory}
-              themeClasses={themeClasses}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              filterLevel={filterLevel}
-              setFilterLevel={setFilterLevel}
-              filterNeae={filterNeae}
-              setFilterNeae={setFilterNeae}
-              filterDesarrollo={filterDesarrollo}
-              setFilterDesarrollo={setFilterDesarrollo}
-              SUBJECTS_BY_LEVEL={SUBJECTS_BY_LEVEL}
-              NEAE_OPTIONS={NEAE_OPTIONS}
-              DESARROLLO_AREAS={DESARROLLO_AREAS}
-            />
-
-            <ExploreGrid
-              filteredResources={filteredResources}
-              themeClasses={themeClasses}
+          {view === AppView.Blog && (
+            <BlogView 
+              filteredBlogPosts={filteredBlogPosts}
+              activeBlogCategory={activeBlogCategory}
+              handleBlogCategoryClick={handleBlogCategoryClick}
               setSelectedResource={setSelectedResource}
               navigateTo={navigateTo}
+              BLOG_CATEGORIES={BLOG_CATEGORIES}
               stripHtml={stripHtml}
             />
-          </div>
-        )}
+          )}
 
-        {view === AppView.TopDocentes && (
-          <TopDocentesView
-            teacherRankings={teacherRankings}
-            themeClasses={themeClasses}
-            setViewingUserEmail={setViewingUserEmail}
-            navigateTo={navigateTo}
-          />
-        )}
+          {view === AppView.Explore && (
+            <div className="space-y-8 animate-in fade-in duration-500">
+              <ExploreFilters
+                activeCategory={activeCategory}
+                themeClasses={themeClasses}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                filterLevel={filterLevel}
+                setFilterLevel={setFilterLevel}
+                filterNeae={filterNeae}
+                setFilterNeae={setFilterNeae}
+                filterDesarrollo={filterDesarrollo}
+                setFilterDesarrollo={setFilterDesarrollo}
+                SUBJECTS_BY_LEVEL={SUBJECTS_BY_LEVEL}
+                NEAE_OPTIONS={NEAE_OPTIONS}
+                DESARROLLO_AREAS={DESARROLLO_AREAS}
+              />
 
-        {view === AppView.Profile && activeProfile && (
-          <ProfileView
-            activeProfile={activeProfile}
-            profileResources={profileResources}
-            themeClasses={themeClasses}
-            navigateTo={navigateTo}
-            setSelectedResource={setSelectedResource}
-          />
-        )}
+              <ExploreGrid
+                filteredResources={filteredResources}
+                themeClasses={themeClasses}
+                setSelectedResource={setSelectedResource}
+                navigateTo={navigateTo}
+                stripHtml={stripHtml}
+              />
+            </div>
+          )}
 
-        {view === AppView.Account && (
-          <AccountView
-            currentUser={currentUser}
-            themeClasses={themeClasses}
-            handleGoogleLogin={handleGoogleLogin}
-            isRegistering={isRegistering}
-            handleRegister={handleRegister}
-            handleLogin={handleLogin}
-            registerName={registerName}
-            setRegisterName={setRegisterName}
-            loginEmail={loginEmail}
-            setLoginEmail={setLoginEmail}
-            loginPassword={loginPassword}
-            setLoginPassword={setLoginPassword}
-            authError={authError}
-            setAuthError={setAuthError}
-            setIsRegistering={setIsRegistering}
-            setCurrentUser={setCurrentUser}
-            navigateTo={navigateTo}
-            handleUpdateProfile={handleUpdateProfile}
-            profileForm={profileForm}
-            setProfileForm={setProfileForm}
-          />
-        )}
+          {view === AppView.TopDocentes && (
+            <TopDocentesView
+              teacherRankings={teacherRankings}
+              themeClasses={themeClasses}
+              setViewingUserEmail={setViewingUserEmail}
+              navigateTo={navigateTo}
+            />
+          )}
 
-        {view === AppView.Upload && currentUser && (
-          <UploadView
-            editingResourceId={editingResourceId}
-            themeClasses={themeClasses}
-            handleUpload={handleUpload}
-            formData={formData}
-            setFormData={setFormData}
-            SUBJECTS_BY_LEVEL={SUBJECTS_BY_LEVEL}
-            BLOG_CATEGORIES={BLOG_CATEGORIES}
-            activeCategory={activeCategory}
-            NEAE_OPTIONS={NEAE_OPTIONS}
-            DESARROLLO_AREAS={DESARROLLO_AREAS}
-            COURSES_BY_LEVEL={COURSES_BY_LEVEL}
-            handleCourseToggle={handleCourseToggle}
-            isUploading={isUploading}
-          />
-        )}
+          {view === AppView.Profile && activeProfile && (
+            <ProfileView
+              activeProfile={activeProfile}
+              profileResources={profileResources}
+              themeClasses={themeClasses}
+              navigateTo={navigateTo}
+              setSelectedResource={setSelectedResource}
+            />
+          )}
 
-        {view === AppView.Detail && selectedResource && (
-          <ResourceDetail 
-            selectedResource={selectedResource}
-            currentUser={currentUser}
-            users={users}
-            themeClasses={themeClasses}
-            cookieConsent={cookieConsent}
-            navigateTo={navigateTo}
-            handleEditResource={handleEditResource}
-            handleDeleteResource={handleDeleteResource}
-            copyToClipboard={copyToClipboard}
-            setViewingUserEmail={setViewingUserEmail}
-            handleMaximize={handleMaximize}
-            renderContentWithVideos={renderContentWithVideos}
-          />
-        )}
+          {view === AppView.Account && (
+            <AccountView
+              currentUser={currentUser}
+              themeClasses={themeClasses}
+              handleGoogleLogin={handleGoogleLogin}
+              isRegistering={isRegistering}
+              handleRegister={handleRegister}
+              handleLogin={handleLogin}
+              registerName={registerName}
+              setRegisterName={setRegisterName}
+              loginEmail={loginEmail}
+              setLoginEmail={setLoginEmail}
+              loginPassword={loginPassword}
+              setLoginPassword={setLoginPassword}
+              authError={authError}
+              setAuthError={setAuthError}
+              setIsRegistering={setIsRegistering}
+              setCurrentUser={setCurrentUser}
+              navigateTo={navigateTo}
+              handleUpdateProfile={handleUpdateProfile}
+              profileForm={profileForm}
+              setProfileForm={setProfileForm}
+            />
+          )}
+
+          {view === AppView.Upload && currentUser && (
+            <UploadView
+              editingResourceId={editingResourceId}
+              themeClasses={themeClasses}
+              handleUpload={handleUpload}
+              formData={formData}
+              setFormData={setFormData}
+              SUBJECTS_BY_LEVEL={SUBJECTS_BY_LEVEL}
+              BLOG_CATEGORIES={BLOG_CATEGORIES}
+              activeCategory={activeCategory}
+              NEAE_OPTIONS={NEAE_OPTIONS}
+              DESARROLLO_AREAS={DESARROLLO_AREAS}
+              COURSES_BY_LEVEL={COURSES_BY_LEVEL}
+              handleCourseToggle={handleCourseToggle}
+              isUploading={isUploading}
+            />
+          )}
+
+          {view === AppView.Detail && selectedResource && (
+            <ResourceDetail 
+              selectedResource={selectedResource}
+              currentUser={currentUser}
+              users={users}
+              themeClasses={themeClasses}
+              cookieConsent={cookieConsent}
+              navigateTo={navigateTo}
+              handleEditResource={handleEditResource}
+              handleDeleteResource={handleDeleteResource}
+              copyToClipboard={copyToClipboard}
+              setViewingUserEmail={setViewingUserEmail}
+              handleMaximize={handleMaximize}
+              renderContentWithVideos={renderContentWithVideos}
+            />
+          )}
+        </Suspense>
       </main>
 
       <Footer themeClasses={themeClasses} />

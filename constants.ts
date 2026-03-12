@@ -45,6 +45,25 @@ export const COURSES_BY_LEVEL: Record<EducationalLevel, string[]> = {
   'Bachillerato': ['1º Bachillerato', '2º Bachillerato']
 };
 
+export const NEAE_OPTIONS = ['Dislexia', 'TDAH', 'Autismo (TEA)', 'Trastorno Específico del Lenguaje (TEL)', 'Discapacidad Intelectual', 'Trastorno Grave del Desarrollo', 'Discapacidad Visual', 'Discapacidad Auditiva', 'Discapacidad física', 'Altas Capacidades Intelectuales', 'Educación Compensatoria', 'Trastornos Graves de Conducta'];
+export const DESARROLLO_AREAS = ['Cognitiva', 'comunicativa', 'social y emocional', 'psicomotor', 'motor'];
+
+export type SafeAny = any;
+
+export const BLOG_CATEGORIES = [
+  'Todo', 
+  'Dislexia', 
+  'Autismo (TEA)', 
+  'TDAH', 
+  'Altas Capacidades', 
+  'Metodologías', 
+  'Recursos Digitales', 
+  'Inclusión',
+  'Gestión de Aula'
+];
+
+export const GTM_ID = 'GTM-PCMTTC42';
+
 export const INITIAL_USERS: User[] = [
   { 
     email: 'm.garcia@educacion.es', 
