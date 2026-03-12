@@ -15,6 +15,7 @@ interface ResourceDetailProps {
   setViewingUserEmail: (email: string | null) => void;
   handleMaximize: () => void;
   renderContentWithVideos: (content: string, consent: boolean | null) => string;
+  isLoading?: boolean;
 }
 
 const ResourceDetail: React.FC<ResourceDetailProps> = ({
@@ -29,8 +30,17 @@ const ResourceDetail: React.FC<ResourceDetailProps> = ({
   copyToClipboard,
   setViewingUserEmail,
   handleMaximize,
-  renderContentWithVideos
+  renderContentWithVideos,
+  isLoading
 }) => {
+  if (isLoading) {
+    return (
+      <div className="flex py-24 items-center justify-center">
+        <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="animate-in fade-in duration-300 space-y-8">
       <div className="flex items-center justify-between gap-4">

@@ -409,8 +409,6 @@ const App: React.FC = () => {
     navigateTo(AppView.Blog, { category: cat });
   };
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-white flex-col gap-6"><div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div><h2 className="text-xl font-black text-slate-800 uppercase tracking-tighter">NOGALES<span className="text-indigo-600">PT</span></h2></div>;
-
   if (urlParamsState.isStandalone && urlParamsState.standaloneId) {
     const res = resources.find(r => r.id === urlParamsState.standaloneId);
     if (!res) return <div className="min-h-screen flex items-center justify-center font-black uppercase text-slate-400">Recurso no encontrado</div>;
@@ -489,6 +487,7 @@ const App: React.FC = () => {
                 setSelectedResource={setSelectedResource}
                 navigateTo={navigateTo}
                 stripHtml={stripHtml}
+                isLoading={isLoading}
               />
             </div>
           )}
@@ -499,6 +498,7 @@ const App: React.FC = () => {
               themeClasses={themeClasses}
               setViewingUserEmail={setViewingUserEmail}
               navigateTo={navigateTo}
+              isLoading={isLoading}
             />
           )}
 
@@ -569,6 +569,7 @@ const App: React.FC = () => {
               setViewingUserEmail={setViewingUserEmail}
               handleMaximize={handleMaximize}
               renderContentWithVideos={renderContentWithVideos}
+              isLoading={isLoading}
             />
           )}
         </Suspense>

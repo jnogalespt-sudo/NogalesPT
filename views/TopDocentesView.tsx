@@ -7,14 +7,24 @@ interface TopDocentesViewProps {
   themeClasses: any;
   setViewingUserEmail: (email: string) => void;
   navigateTo: (view: AppView, params?: any) => void;
+  isLoading?: boolean;
 }
 
 export const TopDocentesView: React.FC<TopDocentesViewProps> = ({
   teacherRankings,
   themeClasses,
   setViewingUserEmail,
-  navigateTo
+  navigateTo,
+  isLoading
 }) => {
+  if (isLoading) {
+    return (
+      <div className="flex py-24 items-center justify-center">
+        <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-12 animate-in fade-in duration-500">
       <header className="text-center space-y-4">

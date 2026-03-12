@@ -8,6 +8,7 @@ interface ExploreGridProps {
   setSelectedResource: (resource: Resource | null) => void;
   navigateTo: (view: AppView, params?: any) => void;
   stripHtml: (html: string) => string;
+  isLoading?: boolean;
 }
 
 export const ExploreGrid: React.FC<ExploreGridProps> = ({
@@ -15,8 +16,17 @@ export const ExploreGrid: React.FC<ExploreGridProps> = ({
   themeClasses,
   setSelectedResource,
   navigateTo,
-  stripHtml
+  stripHtml,
+  isLoading
 }) => {
+  if (isLoading) {
+    return (
+      <div className="flex py-24 items-center justify-center">
+        <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       {filteredResources.map(res => (
