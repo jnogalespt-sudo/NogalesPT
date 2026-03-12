@@ -23,11 +23,12 @@ const SocialLink = ({ platform, handle }: { platform: 'instagram' | 'linkedin' |
 };
 
 interface ProfileViewProps {
-  activeProfile: UserType;
+  activeProfile: UserType | null;
   profileResources: Resource[];
   themeClasses: any;
   navigateTo: (view: AppView, params?: any) => void;
   setSelectedResource: (resource: Resource | null) => void;
+  isLoading?: boolean;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -35,8 +36,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   profileResources,
   themeClasses,
   navigateTo,
-  setSelectedResource
+  setSelectedResource,
+  isLoading
 }) => {
+  if (isLoading || !activeProfile) {
+    return (
+      <div className="flex py-24 items-center justify-center">
+        <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in duration-500">
       <button onClick={() => navigateTo(AppView.Explore)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900 transition-colors"><ArrowLeft size={18}/> Volver</button>

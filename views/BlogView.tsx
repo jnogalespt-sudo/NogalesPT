@@ -9,6 +9,7 @@ interface BlogViewProps {
   navigateTo: (view: AppView, params?: Record<string, string>) => void;
   BLOG_CATEGORIES: string[];
   stripHtml: (html: string) => string;
+  isLoading?: boolean;
 }
 
 const BlogView: React.FC<BlogViewProps> = ({
@@ -18,8 +19,17 @@ const BlogView: React.FC<BlogViewProps> = ({
   setSelectedResource,
   navigateTo,
   BLOG_CATEGORIES,
-  stripHtml
+  stripHtml,
+  isLoading
 }) => {
+  if (isLoading) {
+    return (
+      <div className="flex py-24 items-center justify-center">
+        <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-12 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-end gap-6">

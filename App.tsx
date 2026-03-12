@@ -33,6 +33,37 @@ import { useTeacherRankings } from './hooks/useTeacherRankings';
 import { useSeoManager } from './hooks/useSeoManager';
 import { useCookieManager } from './hooks/useCookieManager';
 
+const getInitialView = (): AppView => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get('view') as AppView;
+    if (viewParam && Object.values(AppView).includes(viewParam)) {
+      return viewParam;
+    }
+  }
+  return AppView.Home;
+};
+
+const getInitialUserEmail = (): string | null => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === AppView.Profile) {
+      return params.get('user');
+    }
+  }
+  return null;
+};
+
+const getInitialBlogCategory = (): string => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === AppView.Blog) {
+      return params.get('category') || 'Todo';
+    }
+  }
+  return 'Todo';
+};
+
 const App: React.FC = () => {
   const { cookieConsent, showCookieBanner, handleAcceptCookies, handleRejectCookies } = useCookieManager();
   
@@ -44,9 +75,9 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
 
-  const [view, setView] = useState<AppView>(AppView.Home);
+  const [view, setView] = useState<AppView>(getInitialView());
   const [activeCategory, setActiveCategory] = useState<MainCategory>('PT-AL');
-  const [activeBlogCategory, setActiveBlogCategory] = useState<string>('Todo');
+  const [activeBlogCategory, setActiveBlogCategory] = useState<string>(getInitialBlogCategory());
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLevel, setFilterLevel] = useState<string>('Todos');
@@ -55,7 +86,7 @@ const App: React.FC = () => {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
-  const [viewingUserEmail, setViewingUserEmail] = useState<string | null>(null);
+  const [viewingUserEmail, setViewingUserEmail] = useState<string | null>(getInitialUserEmail());
   const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
 
   const [loginEmail, setLoginEmail] = useState('');
@@ -150,7 +181,6 @@ const App: React.FC = () => {
           const idParam = params.get('id');
 
           if (viewParam) {
-            setView(viewParam);
             if (viewParam === AppView.Detail && idParam) {
               const found = resData.find((r: Resource) => r.id === idParam);
               if (found) setSelectedResource(found);
@@ -228,7 +258,7 @@ const App: React.FC = () => {
       : { bg: 'bg-indigo-600', text: 'text-indigo-600', softBg: 'bg-indigo-50', softText: 'text-indigo-700' };
   }, [activeCategory]);
 
-  const activeProfile = useMemo(() => users.find(u => u.email === viewingUserEmail), [users, viewingUserEmail]);
+  const activeProfile = useMemo(() => users.find(u => u.email === viewingUserEmail) || null, [users, viewingUserEmail]);
   const profileResources = useMemo(() => resources.filter(r => r.email === viewingUserEmail), [resources, viewingUserEmail]);
 
   useSeoManager(view, selectedResource, activeBlogCategory, activeCategory, stripHtml);
@@ -410,12 +440,52 @@ const App: React.FC = () => {
   };
 
   if (urlParamsState.isStandalone && urlParamsState.standaloneId) {
+    if (isLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-white">
+          <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+        </div>
+      );
+    }
+
     const res = resources.find(r => r.id === urlParamsState.standaloneId);
-    if (!res) return <div className="min-h-screen flex items-center justify-center font-black uppercase text-slate-400">Recurso no encontrado</div>;
+
+    if (!res) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center space-y-6">
+          <div className="w-20 h-20 bg-white rounded-3xl shadow-sm flex items-center justify-center text-slate-300 border border-slate-100">
+            <Newspaper size={40} />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Recurso no encontrado</h2>
+            <p className="text-slate-500 text-sm font-medium max-w-xs mx-auto">
+              El material que intentas visualizar en pantalla completa no está disponible.
+            </p>
+          </div>
+          <button 
+            onClick={() => {if(typeof window !== 'undefined') window.close()}}
+            className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition-all active:scale-95"
+          >
+            Cerrar ventana
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="fixed inset-0 bg-white z-[9999] overflow-hidden">
-        <iframe src={res.pastedCode ? '' : res.contentUrl} srcDoc={res.pastedCode} className="w-full h-full border-none" title={res.title} />
-        <button onClick={() => {if(typeof window !== 'undefined') window.close()}} className="absolute top-6 right-6 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl hover:scale-105 transition-all text-slate-900 border border-slate-200"><X size={24} /></button>
+        <iframe 
+          src={res.pastedCode ? '' : res.contentUrl} 
+          srcDoc={res.pastedCode} 
+          className="w-full h-full border-none" 
+          title={res.title} 
+        />
+        <button 
+          onClick={() => {if(typeof window !== 'undefined') window.close()}} 
+          className="absolute top-6 right-6 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl hover:scale-105 transition-all text-slate-900 border border-slate-200 hover:bg-white"
+        >
+          <X size={24} />
+        </button>
       </div>
     );
   }
@@ -460,6 +530,7 @@ const App: React.FC = () => {
               navigateTo={navigateTo}
               BLOG_CATEGORIES={BLOG_CATEGORIES}
               stripHtml={stripHtml}
+              isLoading={isLoading}
             />
           )}
 
@@ -502,13 +573,14 @@ const App: React.FC = () => {
             />
           )}
 
-          {view === AppView.Profile && activeProfile && (
+          {view === AppView.Profile && (
             <ProfileView
               activeProfile={activeProfile}
               profileResources={profileResources}
               themeClasses={themeClasses}
               navigateTo={navigateTo}
               setSelectedResource={setSelectedResource}
+              isLoading={isLoading}
             />
           )}
 
@@ -534,10 +606,11 @@ const App: React.FC = () => {
               handleUpdateProfile={handleUpdateProfile}
               profileForm={profileForm}
               setProfileForm={setProfileForm}
+              isLoading={isLoading}
             />
           )}
 
-          {view === AppView.Upload && currentUser && (
+          {view === AppView.Upload && (currentUser || isLoading) && (
             <UploadView
               editingResourceId={editingResourceId}
               themeClasses={themeClasses}
@@ -552,10 +625,11 @@ const App: React.FC = () => {
               COURSES_BY_LEVEL={COURSES_BY_LEVEL}
               handleCourseToggle={handleCourseToggle}
               isUploading={isUploading}
+              isLoading={isLoading}
             />
           )}
 
-          {view === AppView.Detail && selectedResource && (
+          {view === AppView.Detail && (
             <ResourceDetail 
               selectedResource={selectedResource}
               currentUser={currentUser}

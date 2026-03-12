@@ -24,6 +24,7 @@ interface AccountViewProps {
   handleUpdateProfile: (e: React.FormEvent) => void;
   profileForm: UserType;
   setProfileForm: (val: UserType) => void;
+  isLoading?: boolean;
 }
 
 export const AccountView: React.FC<AccountViewProps> = ({
@@ -46,8 +47,17 @@ export const AccountView: React.FC<AccountViewProps> = ({
   navigateTo,
   handleUpdateProfile,
   profileForm,
-  setProfileForm
+  setProfileForm,
+  isLoading
 }) => {
+  if (isLoading) {
+    return (
+      <div className="flex py-24 items-center justify-center">
+        <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto py-12">
       {!currentUser ? (

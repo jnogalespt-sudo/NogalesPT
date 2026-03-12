@@ -3,7 +3,7 @@ import { ArrowLeft, Edit3, Trash2, Maximize2, Newspaper } from 'lucide-react';
 import { AppView, Resource, User as UserType } from '../types';
 
 interface ResourceDetailProps {
-  selectedResource: Resource;
+  selectedResource: Resource | null;
   currentUser: UserType | null;
   users: UserType[];
   themeClasses: { bg: string; text: string; softBg: string; softText: string };
@@ -37,6 +37,26 @@ const ResourceDetail: React.FC<ResourceDetailProps> = ({
     return (
       <div className="flex py-24 items-center justify-center">
         <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!selectedResource) {
+    return (
+      <div className="max-w-4xl mx-auto py-24 text-center space-y-8 animate-in fade-in duration-500">
+        <div className="w-24 h-24 bg-slate-100 rounded-[32px] flex items-center justify-center mx-auto text-slate-400">
+          <Newspaper size={48} />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-3xl font-black text-slate-900">Recurso no encontrado</h2>
+          <p className="text-slate-500 font-medium">El material que buscas no existe o ha sido eliminado.</p>
+        </div>
+        <button 
+          onClick={() => navigateTo(AppView.Explore)}
+          className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95"
+        >
+          Volver al repositorio
+        </button>
       </div>
     );
   }

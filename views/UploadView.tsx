@@ -20,6 +20,7 @@ interface UploadViewProps {
   COURSES_BY_LEVEL: Record<string, string[]>;
   handleCourseToggle: (course: string) => void;
   isUploading: boolean;
+  isLoading?: boolean;
 }
 
 export const UploadView: React.FC<UploadViewProps> = ({
@@ -35,8 +36,17 @@ export const UploadView: React.FC<UploadViewProps> = ({
   DESARROLLO_AREAS,
   COURSES_BY_LEVEL,
   handleCourseToggle,
-  isUploading
+  isUploading,
+  isLoading
 }) => {
+  if (isLoading) {
+    return (
+      <div className="flex py-24 items-center justify-center">
+        <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-8 duration-500">
       <div className="bg-white rounded-[40px] shadow-sm border border-slate-200 p-8 md:p-12">
