@@ -123,8 +123,22 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && resources.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get('view') as AppView;
+      const idParam = params.get('id');
+
+      if (viewParam === AppView.Detail && idParam) {
+        const found = resources.find(r => r.id === idParam);
+        if (found) {
+          setSelectedResource(found);
+        }
+      }
+    }
+  }, [resources]);
+
+  useEffect(() => {
     let isMounted = true;
-    let initialLoadDone = false;
 
     const loadDataAndAuth = async (session: any) => {
       try {
@@ -199,20 +213,6 @@ const App: React.FC = () => {
               localStorage.removeItem('nogalespt_current_user');
             }
           }
-        }
-
-        if (!initialLoadDone && typeof window !== 'undefined' && isMounted) {
-          const params = new URLSearchParams(window.location.search);
-          const viewParam = params.get('view') as AppView;
-          const idParam = params.get('id');
-
-          if (viewParam) {
-            if (viewParam === AppView.Detail && idParam) {
-              const found = finalResources.find((r: Resource) => r.id === idParam);
-              if (found) setSelectedResource(found);
-            }
-          }
-          initialLoadDone = true;
         }
       } catch (error) {
         console.error("Error cargando app:", error);
