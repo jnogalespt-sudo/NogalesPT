@@ -237,13 +237,25 @@ const App: React.FC = () => {
       }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+    // Recuperar el Atrapador: forzar la lectura del token de Google al montar la app
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (isMounted) {
         loadDataAndAuth(session);
+      }
+    });
+
+    // Mantener el Listener para futuros eventos
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        if (isMounted) {
+          loadDataAndAuth(session);
+        }
       } else if (event === 'SIGNED_OUT') {
-        setCurrentUser(null);
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('nogalespt_current_user');
+        if (isMounted) {
+          setCurrentUser(null);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('nogalespt_current_user');
+          }
         }
       }
     });
