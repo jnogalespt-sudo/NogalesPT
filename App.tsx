@@ -139,8 +139,10 @@ const App: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
+    let authCallId = 0;
 
     const loadDataAndAuth = async (session: any) => {
+      const currentCallId = ++authCallId;
       try {
         // 1. SWR: Load from cache first
         if (typeof window !== 'undefined') {
@@ -180,7 +182,7 @@ const App: React.FC = () => {
           dbService.getUsers().catch(() => [])
         ]);
         
-        if (!isMounted) return;
+        if (!isMounted || currentCallId !== authCallId) return;
         
         // 3. Update state with fresh data
         const finalResources = resData || [];
@@ -192,18 +194,24 @@ const App: React.FC = () => {
           localStorage.setItem('nogalespt_cached_resources', JSON.stringify(finalResources));
         }
 
-        if (session?.user) {
-          const uEmail = session.user.email || '';
+        // Obtener la sesión más reciente para evitar condiciones de carrera
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const activeSession = currentSession || session;
+
+        if (!isMounted || currentCallId !== authCallId) return;
+
+        if (activeSession?.user) {
+          const uEmail = activeSession.user.email || '';
           let user = usersData.find(u => u.email === uEmail);
           
           if (!user) {
             user = {
               email: uEmail,
-              name: session.user.user_metadata?.full_name || uEmail.split('@')[0],
-              avatar: session.user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${uEmail}&background=random`
+              name: activeSession.user.user_metadata?.full_name || uEmail.split('@')[0],
+              avatar: activeSession.user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${uEmail}&background=random`
             };
             await dbService.saveUser(user);
-            if (isMounted) {
+            if (isMounted && currentCallId === authCallId) {
               setUsers(prev => {
                 if (!prev.find(u => u.email === uEmail)) {
                   return [...prev, user!];
@@ -213,7 +221,7 @@ const App: React.FC = () => {
             }
           }
           
-          if (isMounted) {
+          if (isMounted && currentCallId === authCallId) {
             setCurrentUser(user);
             setProfileForm(user);
             if (typeof window !== 'undefined') {
@@ -221,7 +229,7 @@ const App: React.FC = () => {
             }
           }
         } else {
-          if (isMounted) {
+          if (isMounted && currentCallId === authCallId) {
             setCurrentUser(null);
             if (typeof window !== 'undefined') {
               localStorage.removeItem('nogalespt_current_user');
@@ -231,7 +239,7 @@ const App: React.FC = () => {
       } catch (error) {
         console.error("Error cargando app:", error);
       } finally {
-        if (isMounted) {
+        if (isMounted && currentCallId === authCallId) {
           setIsLoading(false);
         }
       }
@@ -246,7 +254,7 @@ const App: React.FC = () => {
 
     // Mantener el Listener para futuros eventos
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (isMounted) {
           loadDataAndAuth(session);
         }
