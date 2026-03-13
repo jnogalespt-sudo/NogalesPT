@@ -29,24 +29,87 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
     exec("insertHTML", table);
   };
 
-  const handleImage = () => {
+  const handleImage = (existingImg?: HTMLImageElement | React.MouseEvent | null) => {
     if (typeof window === 'undefined') return;
-    const imageUrl = window.prompt('URL de la imagen:');
-    if (!imageUrl) return;
+    
+    // Check if it's an event (from toolbar click) or an image element (from editor click)
+    const isEvent = existingImg && 'preventDefault' in existingImg;
+    const imgElement = isEvent ? null : (existingImg as HTMLImageElement | null);
+    
+    let currentSrc = '';
+    let currentAlt = '';
+    let currentLink = '';
+    let currentWidth = '100%';
+    let parentA: HTMLAnchorElement | null = null;
 
-    const linkUrl = window.prompt('URL de enlace opcional (deja vacío si no deseas enlace):');
-    const width = window.prompt('Ancho deseado (ej. 100%, 500px):', '100%');
-
-    let imgHtml = `<img src="${imageUrl}" 
-      style="width: ${width || '100%'}; max-width: 100%; height: auto; display: inline-block; vertical-align: middle; margin: 10px 0; border-radius: 8px; resize: both; overflow: hidden; cursor: pointer; border: 2px solid transparent;" 
-      class="editor-resizable-img" 
-      alt="Imagen insertada" />`;
-
-    if (linkUrl && linkUrl.trim() !== '') {
-      imgHtml = `<a href="${linkUrl}" target="_blank" rel="noopener noreferrer">${imgHtml}</a>`;
+    if (imgElement) {
+      currentSrc = imgElement.src;
+      currentAlt = imgElement.alt;
+      currentWidth = imgElement.style.width || imgElement.getAttribute('width') || '100%';
+      if (imgElement.parentElement && imgElement.parentElement.tagName === 'A') {
+        parentA = imgElement.parentElement as HTMLAnchorElement;
+        currentLink = parentA.href;
+      }
     }
 
-    exec("insertHTML", imgHtml + '<p><br></p>');
+    const imageUrl = window.prompt('URL de Imagen (Obligatorio):', currentSrc);
+    if (!imageUrl) return;
+
+    let altText = window.prompt('Texto Alternativo (Alt) (Obligatorio para accesibilidad):', currentAlt);
+    while (!altText) {
+      if (altText === null) return; // Cancelled
+      altText = window.prompt('El Texto Alternativo es obligatorio. Por favor, introdúcelo:', currentAlt);
+    }
+
+    const linkUrl = window.prompt('¿A qué web quieres que lleve esta imagen? (Dejar vacío para ninguna)', currentLink);
+    const width = window.prompt('Tamaño de la imagen (ej. 100%, 500px):', currentWidth);
+
+    if (imgElement) {
+      // Update existing
+      imgElement.src = imageUrl;
+      imgElement.alt = altText;
+      imgElement.style.width = width || '100%';
+      
+      if (linkUrl && linkUrl.trim() !== '') {
+        if (parentA) {
+          parentA.href = linkUrl;
+        } else {
+          // Wrap in A tag
+          const a = document.createElement('a');
+          a.href = linkUrl;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          imgElement.parentNode?.insertBefore(a, imgElement);
+          a.appendChild(imgElement);
+        }
+      } else {
+        if (parentA) {
+          // Unwrap A tag
+          parentA.parentNode?.insertBefore(imgElement, parentA);
+          parentA.remove();
+        }
+      }
+      if (editorRef.current) onChange(editorRef.current.innerHTML);
+    } else {
+      // Insert new
+      let imgHtml = `<img src="${imageUrl}" 
+        style="width: ${width || '100%'}; max-width: 100%; height: auto; display: inline-block; vertical-align: middle; margin: 10px 0; border-radius: 8px; resize: both; overflow: hidden; cursor: pointer; border: 2px solid transparent;" 
+        class="editor-resizable-img" 
+        alt="${altText}" />`;
+
+      if (linkUrl && linkUrl.trim() !== '') {
+        imgHtml = `<a href="${linkUrl}" target="_blank" rel="noopener noreferrer">${imgHtml}</a>`;
+      }
+
+      exec("insertHTML", imgHtml + '<p><br></p>');
+    }
+  };
+
+  const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'IMG') {
+      handleImage(target as HTMLImageElement);
+    }
   };
 
   const ToolbarButton = ({ onClick, icon: Icon, title, active = false }: any) => (
@@ -146,7 +209,7 @@ const RichTextEditor = ({ value, onChange }: { value: string, onChange: (val: st
         </select>
       </div>
 
-      <div ref={editorRef} contentEditable onInput={(e) => onChange(e.currentTarget.innerHTML)} className="p-8 min-h-[300px] outline-none prose prose-slate max-w-none text-slate-800 font-medium bg-white selection:bg-indigo-100" />
+      <div ref={editorRef} contentEditable onInput={(e) => onChange(e.currentTarget.innerHTML)} onClick={handleEditorClick} className="p-8 min-h-[300px] outline-none prose prose-slate max-w-none text-slate-800 font-medium bg-white selection:bg-indigo-100" />
       <div className="bg-slate-50 border-t border-slate-200 px-4 py-1 flex justify-end">
         <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Editor Nogales PRO v2.1</span>
       </div>

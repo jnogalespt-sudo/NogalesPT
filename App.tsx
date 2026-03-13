@@ -151,7 +151,21 @@ const App: React.FC = () => {
               if (Array.isArray(parsed) && parsed.length > 0) {
                 if (isMounted) {
                   setResources(parsed);
-                  setIsLoading(false); // Make UI usable instantly
+                  
+                  // Check if we are looking for a specific ID in the URL
+                  const params = new URLSearchParams(window.location.search);
+                  const idParam = params.get('id');
+                  
+                  if (idParam) {
+                    // If looking for an ID, only stop loading if it's in the cache
+                    const foundInCache = parsed.some(r => r.id === idParam);
+                    if (foundInCache) {
+                      setIsLoading(false);
+                    }
+                  } else {
+                    // If not looking for a specific ID, make UI usable instantly
+                    setIsLoading(false);
+                  }
                 }
               }
             } catch (e) {
