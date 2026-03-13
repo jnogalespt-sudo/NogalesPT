@@ -128,6 +128,25 @@ const App: React.FC = () => {
 
     const loadDataAndAuth = async (session: any) => {
       try {
+        // 1. SWR: Load from cache first
+        if (typeof window !== 'undefined') {
+          const cachedResources = localStorage.getItem('nogalespt_cached_resources');
+          if (cachedResources) {
+            try {
+              const parsed = JSON.parse(cachedResources);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                if (isMounted) {
+                  setResources(parsed);
+                  setIsLoading(false); // Make UI usable instantly
+                }
+              }
+            } catch (e) {
+              console.warn('Error parsing cached resources', e);
+            }
+          }
+        }
+
+        // 2. Fetch fresh data
         const [resData, usersData] = await Promise.all([
           dbService.getResources().catch(() => []),
           dbService.getUsers().catch(() => [])
@@ -135,8 +154,15 @@ const App: React.FC = () => {
         
         if (!isMounted) return;
         
-        setResources(resData || []);
+        // 3. Update state with fresh data
+        const finalResources = resData || [];
+        setResources(finalResources);
         setUsers(usersData || []);
+
+        // 4. Update cache
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('nogalespt_cached_resources', JSON.stringify(finalResources));
+        }
 
         if (session?.user) {
           const uEmail = session.user.email || '';
@@ -182,7 +208,7 @@ const App: React.FC = () => {
 
           if (viewParam) {
             if (viewParam === AppView.Detail && idParam) {
-              const found = resData.find((r: Resource) => r.id === idParam);
+              const found = finalResources.find((r: Resource) => r.id === idParam);
               if (found) setSelectedResource(found);
             }
           }
