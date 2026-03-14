@@ -154,19 +154,25 @@ const App: React.FC = () => {
                 if (isMounted) {
                   setResources(parsed);
                   
-                  // Check if we are looking for a specific ID in the URL
-                  const params = new URLSearchParams(window.location.search);
-                  const idParam = params.get('id');
+                  // Si venimos de un redirect OAuth, NO quitamos el loading
+                  // para dar tiempo a que Supabase lea la sesión
+                  const isOAuthRedirect = window.location.hash.includes('access_token');
                   
-                  if (idParam) {
-                    // If looking for an ID, only stop loading if it's in the cache
-                    const foundInCache = parsed.some(r => r.id === idParam);
-                    if (foundInCache) {
+                  if (!isOAuthRedirect) {
+                    // Check if we are looking for a specific ID in the URL
+                    const params = new URLSearchParams(window.location.search);
+                    const idParam = params.get('id');
+                    
+                    if (idParam) {
+                      // If looking for an ID, only stop loading if it's in the cache
+                      const foundInCache = parsed.some(r => r.id === idParam);
+                      if (foundInCache) {
+                        setIsLoading(false);
+                      }
+                    } else {
+                      // If not looking for a specific ID, make UI usable instantly
                       setIsLoading(false);
                     }
-                  } else {
-                    // If not looking for a specific ID, make UI usable instantly
-                    setIsLoading(false);
                   }
                 }
               }
