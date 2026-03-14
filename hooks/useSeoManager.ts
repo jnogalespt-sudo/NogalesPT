@@ -13,7 +13,7 @@ export const useSeoManager = (
 
     let title = "NOGALESPT - Repositorio Educativo Colaborativo";
     let description = "Materiales de calidad, interactivos y adaptados para maestros de PT y AL en Andalucía. Repositorio docente colaborativo.";
-    let image = "https://nogalespt.com/logo.png";
+    let image = "https://i.postimg.cc/HsYNt5Zs/logo-nogalespt-blanco-(1).png";
 
     if (view === AppView.Detail && selectedResource) {
       title = `${selectedResource.title} | NogalesPT`;
