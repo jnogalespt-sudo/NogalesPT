@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { ArrowLeft, Edit3, Trash2, Maximize2, Newspaper } from 'lucide-react';
 import { AppView, Resource, User as UserType } from '../types';
 
@@ -33,55 +33,46 @@ const ResourceDetail: React.FC<ResourceDetailProps> = ({
   renderContentWithVideos,
   isLoading
 }) => {
-  const [showIframe, setShowIframe] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowIframe(true);
-    }, 600);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (isLoading) {
-    return (
-      <div className="animate-pulse space-y-8 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between gap-4">
-          <div className="h-6 bg-slate-200 rounded-md w-32"></div>
-          <div className="flex gap-3">
-            <div className="h-10 bg-slate-200 rounded-2xl w-24"></div>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          <div className="lg:col-span-2 space-y-8">
-            <div className="bg-white p-10 md:p-14 rounded-[48px] shadow-sm border border-slate-100">
-              <div className="h-12 bg-slate-200 rounded-xl w-3/4 mb-8"></div>
-              <div className="space-y-4 mb-12">
-                <div className="h-4 bg-slate-200 rounded-md w-full"></div>
-                <div className="h-4 bg-slate-200 rounded-md w-5/6"></div>
-                <div className="h-4 bg-slate-200 rounded-md w-4/6"></div>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <div className="h-8 bg-slate-200 rounded-full w-24"></div>
-                <div className="h-8 bg-slate-200 rounded-full w-20"></div>
-                <div className="h-8 bg-slate-200 rounded-full w-28"></div>
-              </div>
-            </div>
-            <div className="aspect-video bg-slate-200 rounded-[40px]"></div>
-          </div>
-          <div className="space-y-8">
-            <div className="bg-white p-10 rounded-[48px] shadow-sm border border-slate-100 text-center space-y-8">
-              <div className="w-28 h-28 bg-slate-200 rounded-[36px] mx-auto"></div>
-              <div className="h-6 bg-slate-200 rounded-md w-1/2 mx-auto mt-6"></div>
-              <div className="h-14 bg-slate-200 rounded-[24px] w-full"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (!selectedResource) {
+    if (isLoading) {
+      return (
+        <div className="animate-pulse space-y-8 max-w-7xl mx-auto">
+          <div className="flex items-center justify-between gap-4">
+            <div className="h-6 bg-slate-200 rounded-md w-32"></div>
+            <div className="flex gap-3">
+              <div className="h-10 bg-slate-200 rounded-2xl w-24"></div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+            <div className="lg:col-span-2 space-y-8">
+              <div className="bg-white p-10 md:p-14 rounded-[48px] shadow-sm border border-slate-100">
+                <div className="h-12 bg-slate-200 rounded-xl w-3/4 mb-8"></div>
+                <div className="space-y-4 mb-12">
+                  <div className="h-4 bg-slate-200 rounded-md w-full"></div>
+                  <div className="h-4 bg-slate-200 rounded-md w-5/6"></div>
+                  <div className="h-4 bg-slate-200 rounded-md w-4/6"></div>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <div className="h-8 bg-slate-200 rounded-full w-24"></div>
+                  <div className="h-8 bg-slate-200 rounded-full w-20"></div>
+                  <div className="h-8 bg-slate-200 rounded-full w-28"></div>
+                </div>
+              </div>
+              <div className="aspect-video bg-slate-200 rounded-[40px]"></div>
+            </div>
+            <div className="space-y-8">
+              <div className="bg-white p-10 rounded-[48px] shadow-sm border border-slate-100 text-center space-y-8">
+                <div className="w-28 h-28 bg-slate-200 rounded-[36px] mx-auto"></div>
+                <div className="h-6 bg-slate-200 rounded-md w-1/2 mx-auto mt-6"></div>
+                <div className="h-14 bg-slate-200 rounded-[24px] w-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-4xl mx-auto py-24 text-center space-y-8 animate-in fade-in duration-500">
         <div className="w-24 h-24 bg-slate-100 rounded-[32px] flex items-center justify-center mx-auto text-slate-400">
@@ -120,9 +111,14 @@ const ResourceDetail: React.FC<ResourceDetailProps> = ({
 
       {selectedResource.kind === 'blog' ? (
         <article className="max-w-[850px] mx-auto bg-white rounded-[48px] shadow-sm border border-slate-100 overflow-hidden animate-in slide-in-from-bottom-8 duration-700">
-          <div className="h-[450px] w-full relative">
-            <img loading="lazy" src={selectedResource.thumbnail} className="w-full h-full object-cover" alt={selectedResource.title} />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-12 md:p-20">
+          <div className="h-[450px] w-full relative bg-slate-900">
+            {isLoading && (
+              <div className="absolute inset-0 bg-slate-800 animate-pulse"></div>
+            )}
+            {!isLoading && (
+              <img loading="lazy" src={selectedResource.thumbnail} className="absolute inset-0 w-full h-full object-cover" alt={selectedResource.title} />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-12 md:p-20 z-10">
               <div className="space-y-6">
                 <span className="bg-indigo-600 text-white px-5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg">{selectedResource.subject}</span>
                 <h1 className="text-4xl md:text-6xl font-black text-white leading-[1.1] tracking-tighter">{selectedResource.title}</h1>
@@ -158,7 +154,11 @@ const ResourceDetail: React.FC<ResourceDetailProps> = ({
 
             {(selectedResource.pastedCode || (selectedResource.contentUrl && selectedResource.contentUrl.trim() !== '')) && (
               <div className="aspect-video bg-slate-900 rounded-[40px] shadow-2xl overflow-hidden relative border-4 border-white ring-1 ring-slate-200">
-                {showIframe ? (
+                {isLoading ? (
+                  <div className="w-full h-full bg-slate-100 animate-pulse flex items-center justify-center">
+                    <div className="w-16 h-16 border-4 border-slate-300 border-t-slate-400 rounded-full animate-spin"></div>
+                  </div>
+                ) : (
                   <>
                     <iframe 
                       src={selectedResource.pastedCode ? '' : selectedResource.contentUrl} 
@@ -170,10 +170,6 @@ const ResourceDetail: React.FC<ResourceDetailProps> = ({
                       <Maximize2 size={24} />
                     </button>
                   </>
-                ) : (
-                  <div className="w-full h-full bg-slate-100 animate-pulse flex items-center justify-center">
-                    <div className="w-16 h-16 border-4 border-slate-300 border-t-slate-400 rounded-full animate-spin"></div>
-                  </div>
                 )}
               </div>
             )}
@@ -184,7 +180,12 @@ const ResourceDetail: React.FC<ResourceDetailProps> = ({
                 <img loading="lazy" src={users.find(u => u.email === selectedResource.email)?.avatar || `https://ui-avatars.com/api/?name=${selectedResource.authorName}`} className="w-28 h-28 rounded-[36px] mx-auto shadow-xl object-cover border-4 border-slate-50 group-hover:scale-105 transition-transform" alt={selectedResource.authorName} />
                 <h3 className="font-black text-slate-900 text-xl mt-6 group-hover:text-indigo-600 transition-colors">{selectedResource.authorName}</h3>
               </div>
-              <a href={selectedResource.contentUrl} target="_blank" rel="noopener noreferrer" className="block w-full py-5 bg-slate-900 text-white rounded-[24px] font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition-colors active:scale-95">Ver Original Externo</a>
+              
+              {isLoading ? (
+                <div className="h-14 bg-slate-200 rounded-[24px] w-full animate-pulse"></div>
+              ) : (
+                <a href={selectedResource.contentUrl} target="_blank" rel="noopener noreferrer" className="block w-full py-5 bg-slate-900 text-white rounded-[24px] font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition-colors active:scale-95">Ver Original Externo</a>
+              )}
             </div>
           </div>
         </div>
