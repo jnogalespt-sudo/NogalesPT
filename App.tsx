@@ -142,15 +142,18 @@ const App: React.FC = () => {
     let authCallId = 0;
 
     // Carga prioritaria de recurso específico si viene por URL
+    let isDirectResourceLoad = false;
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const view = params.get('view');
       const idParam = params.get('id');
       
       if (view === 'detail' && idParam) {
+        isDirectResourceLoad = true;
         dbService.getResourceById(idParam).then(resource => {
           if (isMounted && resource) {
             setSelectedResource(resource);
+            setIsLoading(false); // 1. Libera setIsLoading(false) inmediatamente
           }
         }).catch(e => {
           console.warn("Error cargando recurso prioritario:", e);
@@ -175,21 +178,8 @@ const App: React.FC = () => {
                   // para dar tiempo a que Supabase lea la sesión
                   const isOAuthRedirect = window.location.hash.includes('access_token');
                   
-                  if (!isOAuthRedirect) {
-                    // Check if we are looking for a specific ID in the URL
-                    const params = new URLSearchParams(window.location.search);
-                    const idParam = params.get('id');
-                    
-                    if (idParam) {
-                      // If looking for an ID, only stop loading if it's in the cache
-                      const foundInCache = parsed.some(r => r.id === idParam);
-                      if (foundInCache) {
-                        setIsLoading(false);
-                      }
-                    } else {
-                      // If not looking for a specific ID, make UI usable instantly
-                      setIsLoading(false);
-                    }
+                  if (!isOAuthRedirect && !isDirectResourceLoad) {
+                    setIsLoading(false);
                   }
                 }
               }
@@ -199,73 +189,104 @@ const App: React.FC = () => {
           }
         }
 
-        // 2. Fetch fresh data
-        const [resData, usersData] = await Promise.all([
-          dbService.getResources().catch(() => []),
-          dbService.getUsers().catch(() => [])
-        ]);
-        
-        if (!isMounted || currentCallId !== authCallId) return;
-        
-        // 3. Update state with fresh data
-        const finalResources = resData || [];
-        setResources(finalResources);
-        setUsers(usersData || []);
-
-        // 4. Update cache
-        if (typeof window !== 'undefined') {
+        const fetchAuthAndUsers = async () => {
           try {
-            localStorage.setItem('nogalespt_cached_resources', JSON.stringify(finalResources));
-          } catch (e) {
-            // Ignorar error de cuota excedida para no romper el flujo
-          }
-        }
+            const usersData = await dbService.getUsers().catch(() => []);
+            if (!isMounted || currentCallId !== authCallId) return;
+            setUsers(usersData || []);
 
-        // Obtener la sesión más reciente para evitar condiciones de carrera
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        const activeSession = currentSession || session;
+            // Obtener la sesión más reciente para evitar condiciones de carrera
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            const activeSession = currentSession || session;
 
-        if (!isMounted || currentCallId !== authCallId) return;
+            if (!isMounted || currentCallId !== authCallId) return;
 
-        if (activeSession?.user) {
-          const uEmail = activeSession.user.email || '';
-          let user = usersData.find(u => u.email === uEmail);
-          
-          if (!user) {
-            user = {
-              email: uEmail,
-              name: activeSession.user.user_metadata?.full_name || uEmail.split('@')[0],
-              avatar: activeSession.user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${uEmail}&background=random`
-            };
-            await dbService.saveUser(user);
-            if (isMounted && currentCallId === authCallId) {
-              setUsers(prev => {
-                if (!prev.find(u => u.email === uEmail)) {
-                  return [...prev, user!];
+            if (activeSession?.user) {
+              const uEmail = activeSession.user.email || '';
+              let user = usersData.find(u => u.email === uEmail);
+              
+              if (!user) {
+                user = {
+                  email: uEmail,
+                  name: activeSession.user.user_metadata?.full_name || uEmail.split('@')[0],
+                  avatar: activeSession.user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${uEmail}&background=random`
+                };
+                await dbService.saveUser(user);
+                if (isMounted && currentCallId === authCallId) {
+                  setUsers(prev => {
+                    if (!prev.find(u => u.email === uEmail)) {
+                      return [...prev, user!];
+                    }
+                    return prev;
+                  });
                 }
-                return prev;
-              });
+              }
+              
+              if (isMounted && currentCallId === authCallId) {
+                setCurrentUser(user);
+                setProfileForm(user);
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('nogalespt_current_user', JSON.stringify(user));
+                }
+              }
+            } else {
+              if (isMounted && currentCallId === authCallId) {
+                setCurrentUser(null);
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('nogalespt_current_user');
+                }
+              }
             }
+          } catch (error) {
+            console.error("Error en fetchAuthAndUsers:", error);
           }
-          
-          if (isMounted && currentCallId === authCallId) {
-            setCurrentUser(user);
-            setProfileForm(user);
+        };
+
+        const fetchResources = async () => {
+          try {
+            // 2. Fetch fresh data
+            const resData = await dbService.getResources().catch(() => []);
+            
+            if (!isMounted || currentCallId !== authCallId) return;
+            
+            // 3. Update state with fresh data
+            const finalResources = resData || [];
+            setResources(finalResources);
+
+            // 4. Update cache
             if (typeof window !== 'undefined') {
-              localStorage.setItem('nogalespt_current_user', JSON.stringify(user));
+              try {
+                localStorage.setItem('nogalespt_cached_resources', JSON.stringify(finalResources));
+              } catch (e) {
+                // Ignorar error de cuota excedida para no romper el flujo
+              }
+            }
+          } catch (error) {
+            console.error("Error en fetchResources:", error);
+          } finally {
+            if (isMounted && currentCallId === authCallId) {
+              setIsLoading(false);
             }
           }
+        };
+
+        // La sesión se resuelve inmediatamente
+        await fetchAuthAndUsers();
+
+        if (isDirectResourceLoad) {
+          // 2. Retrasa la carga completa de recursos con setTimeout de 3000ms
+          setTimeout(() => {
+            if (isMounted && currentCallId === authCallId) {
+              fetchResources();
+            }
+          }, 3000);
         } else {
-          if (isMounted && currentCallId === authCallId) {
-            setCurrentUser(null);
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem('nogalespt_current_user');
-            }
-          }
+          // 3. En la ruta normal sin ?id=, sigue tirando de caché primero y luego carga Supabase en segundo plano
+          await fetchResources();
         }
+
       } catch (error) {
         console.error("Error cargando app:", error);
-      } finally {
         if (isMounted && currentCallId === authCallId) {
           setIsLoading(false);
         }
