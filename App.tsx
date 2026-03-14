@@ -141,6 +141,23 @@ const App: React.FC = () => {
     let isMounted = true;
     let authCallId = 0;
 
+    // Carga prioritaria de recurso específico si viene por URL
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const view = params.get('view');
+      const idParam = params.get('id');
+      
+      if (view === 'detail' && idParam) {
+        dbService.getResourceById(idParam).then(resource => {
+          if (isMounted && resource) {
+            setSelectedResource(resource);
+          }
+        }).catch(e => {
+          console.warn("Error cargando recurso prioritario:", e);
+        });
+      }
+    }
+
     const loadDataAndAuth = async (session: any) => {
       const currentCallId = ++authCallId;
       try {

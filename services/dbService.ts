@@ -41,6 +41,16 @@ export const dbService = {
   },
 
   // --- Recursos ---
+  async getResourceById(id: string): Promise<Resource | null> {
+    const { data, error } = await supabase
+      .from('resources')
+      .select('data')
+      .eq('id', id)
+      .single();
+    if (error || !data) return null;
+    return data.data as Resource;
+  },
+
   async getResources(): Promise<Resource[]> {
     try {
       const { data, error } = await supabase
