@@ -197,7 +197,11 @@ const App: React.FC = () => {
 
         // 4. Update cache
         if (typeof window !== 'undefined') {
-          localStorage.setItem('nogalespt_cached_resources', JSON.stringify(finalResources));
+          try {
+            localStorage.setItem('nogalespt_cached_resources', JSON.stringify(finalResources));
+          } catch (e) {
+            // Ignorar error de cuota excedida para no romper el flujo
+          }
         }
 
         // Obtener la sesión más reciente para evitar condiciones de carrera
