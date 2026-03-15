@@ -114,6 +114,7 @@ const App: React.FC = () => {
     isStandalone: false,
     standaloneId: null
   });
+  const [standaloneResource, setStandaloneResource] = useState<Resource | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -354,7 +355,7 @@ const App: React.FC = () => {
   };
 
   if (urlParamsState.isStandalone && urlParamsState.standaloneId) {
-    if (isLoading) {
+    if (isLoading || (urlParamsState.standaloneId && !standaloneResource && !resources.find(r => r.id === urlParamsState.standaloneId))) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-white">
           <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
@@ -362,12 +363,12 @@ const App: React.FC = () => {
       );
     }
 
-    const res = resources.find(r => r.id === urlParamsState.standaloneId);
+    const res = standaloneResource || resources.find(r => r.id === urlParamsState.standaloneId);
 
     if (res && res.fileType === 'html' && res.pastedCode === undefined) {
       dbService.getResourceById(res.id).then(fullResource => {
         if (fullResource) {
-          setResources(prev => prev.map(r => r.id === fullResource.id ? { ...fullResource, pastedCode: fullResource.pastedCode || "" } : r));
+          setStandaloneResource({ ...fullResource, pastedCode: fullResource.pastedCode || "" });
         }
       }).catch(e => console.warn("Error fetching full standalone resource:", e));
       
