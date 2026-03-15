@@ -161,7 +161,7 @@ const ResourceDetail: React.FC<ResourceDetailProps> = ({
                 ) : (
                   <>
                     <iframe 
-                      src={selectedResource.pastedCode ? '' : selectedResource.contentUrl} 
+                      src={selectedResource.pastedCode ? undefined : selectedResource.contentUrl} 
                       srcDoc={selectedResource.pastedCode} 
                       className="w-full h-full border-none bg-white" 
                       title={selectedResource.title} 

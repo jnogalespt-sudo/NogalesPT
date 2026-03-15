@@ -55,11 +55,15 @@ export const dbService = {
     try {
       const { data, error } = await supabase
         .from('resources')
-        .select('data')
+        .select('id, data')
         .order('created_at', { ascending: false });
 
       if (data && !error) {
-        return data.map(r => r.data as Resource);
+        return data.map(r => {
+          const resource = r.data as Resource;
+          const { pastedCode, ...resourceWithoutCode } = resource;
+          return resourceWithoutCode as Resource;
+        });
       }
     } catch (e) {
       console.error('Supabase fetch error:', e);

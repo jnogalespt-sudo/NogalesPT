@@ -64,6 +64,9 @@ const getInitialBlogCategory = (): string => {
   return 'Todo';
 };
 
+import { useResourceDetail } from './hooks/useResourceDetail';
+import { useAppData } from './hooks/useAppData';
+
 const App: React.FC = () => {
   const { cookieConsent, showCookieBanner, handleAcceptCookies, handleRejectCookies } = useCookieManager();
   
@@ -122,205 +125,8 @@ const App: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && resources.length > 0) {
-      const params = new URLSearchParams(window.location.search);
-      const viewParam = params.get('view') as AppView;
-      const idParam = params.get('id');
-
-      if (viewParam === AppView.Detail && idParam) {
-        const found = resources.find(r => r.id === idParam);
-        if (found) {
-          setSelectedResource(found);
-        }
-      }
-    }
-  }, [resources]);
-
-  useEffect(() => {
-    let isMounted = true;
-    let authCallId = 0;
-
-    // Carga prioritaria de recurso específico si viene por URL
-    let isDirectResourceLoad = false;
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const view = params.get('view');
-      const idParam = params.get('id');
-      
-      if (view === 'detail' && idParam) {
-        isDirectResourceLoad = true;
-        dbService.getResourceById(idParam).then(resource => {
-          if (isMounted && resource) {
-            setSelectedResource(resource);
-            setIsLoading(false); // 1. Libera setIsLoading(false) inmediatamente
-          }
-        }).catch(e => {
-          console.warn("Error cargando recurso prioritario:", e);
-        });
-      }
-    }
-
-    const loadDataAndAuth = async (session: any) => {
-      const currentCallId = ++authCallId;
-      try {
-        // 1. SWR: Load from cache first
-        if (typeof window !== 'undefined') {
-          const cachedResources = localStorage.getItem('nogalespt_cached_resources');
-          if (cachedResources) {
-            try {
-              const parsed = JSON.parse(cachedResources);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                if (isMounted) {
-                  setResources(parsed);
-                  
-                  // Si venimos de un redirect OAuth, NO quitamos el loading
-                  // para dar tiempo a que Supabase lea la sesión
-                  const isOAuthRedirect = window.location.hash.includes('access_token');
-                  
-                  if (!isOAuthRedirect && !isDirectResourceLoad) {
-                    setIsLoading(false);
-                  }
-                }
-              }
-            } catch (e) {
-              console.warn('Error parsing cached resources', e);
-            }
-          }
-        }
-
-        const fetchAuthAndUsers = async () => {
-          try {
-            const usersData = await dbService.getUsers().catch(() => []);
-            if (!isMounted || currentCallId !== authCallId) return;
-            setUsers(usersData || []);
-
-            // Obtener la sesión más reciente para evitar condiciones de carrera
-            const { data: { session: currentSession } } = await supabase.auth.getSession();
-            const activeSession = currentSession || session;
-
-            if (!isMounted || currentCallId !== authCallId) return;
-
-            if (activeSession?.user) {
-              const uEmail = activeSession.user.email || '';
-              let user = usersData.find(u => u.email === uEmail);
-              
-              if (!user) {
-                user = {
-                  email: uEmail,
-                  name: activeSession.user.user_metadata?.full_name || uEmail.split('@')[0],
-                  avatar: activeSession.user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${uEmail}&background=random`
-                };
-                await dbService.saveUser(user);
-                if (isMounted && currentCallId === authCallId) {
-                  setUsers(prev => {
-                    if (!prev.find(u => u.email === uEmail)) {
-                      return [...prev, user!];
-                    }
-                    return prev;
-                  });
-                }
-              }
-              
-              if (isMounted && currentCallId === authCallId) {
-                setCurrentUser(user);
-                setProfileForm(user);
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('nogalespt_current_user', JSON.stringify(user));
-                }
-              }
-            } else {
-              if (isMounted && currentCallId === authCallId) {
-                setCurrentUser(null);
-                if (typeof window !== 'undefined') {
-                  localStorage.removeItem('nogalespt_current_user');
-                }
-              }
-            }
-          } catch (error) {
-            console.error("Error en fetchAuthAndUsers:", error);
-          }
-        };
-
-        const fetchResources = async () => {
-          try {
-            // 2. Fetch fresh data
-            const resData = await dbService.getResources().catch(() => []);
-            
-            if (!isMounted || currentCallId !== authCallId) return;
-            
-            // 3. Update state with fresh data
-            const finalResources = resData || [];
-            setResources(finalResources);
-
-            // 4. Update cache
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.setItem('nogalespt_cached_resources', JSON.stringify(finalResources));
-              } catch (e) {
-                // Ignorar error de cuota excedida para no romper el flujo
-              }
-            }
-          } catch (error) {
-            console.error("Error en fetchResources:", error);
-          } finally {
-            if (isMounted && currentCallId === authCallId) {
-              setIsLoading(false);
-            }
-          }
-        };
-
-        // La sesión se resuelve inmediatamente
-        await fetchAuthAndUsers();
-
-        if (isDirectResourceLoad) {
-          // 2. Retrasa la carga completa de recursos con setTimeout de 3000ms
-          setTimeout(() => {
-            if (isMounted && currentCallId === authCallId) {
-              fetchResources();
-            }
-          }, 3000);
-        } else {
-          // 3. En la ruta normal sin ?id=, sigue tirando de caché primero y luego carga Supabase en segundo plano
-          await fetchResources();
-        }
-
-      } catch (error) {
-        console.error("Error cargando app:", error);
-        if (isMounted && currentCallId === authCallId) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    // Recuperar el Atrapador: forzar la lectura del token de Google al montar la app
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (isMounted) {
-        loadDataAndAuth(session);
-      }
-    });
-
-    // Mantener el Listener para futuros eventos
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (isMounted) {
-          loadDataAndAuth(session);
-        }
-      } else if (event === 'SIGNED_OUT') {
-        if (isMounted) {
-          setCurrentUser(null);
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('nogalespt_current_user');
-          }
-        }
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
+  useResourceDetail(resources, view, setSelectedResource);
+  useAppData(setResources, setUsers, setCurrentUser, setProfileForm, setIsLoading, setSelectedResource);
 
   const handleGoogleLogin = async () => {
     setAuthError(null);
@@ -583,7 +389,7 @@ const App: React.FC = () => {
     return (
       <div className="fixed inset-0 bg-white z-[9999] overflow-hidden">
         <iframe 
-          src={res.pastedCode ? '' : res.contentUrl} 
+          src={res.pastedCode ? undefined : res.contentUrl} 
           srcDoc={res.pastedCode} 
           className="w-full h-full border-none" 
           title={res.title} 
