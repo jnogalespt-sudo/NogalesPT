@@ -364,6 +364,20 @@ const App: React.FC = () => {
 
     const res = resources.find(r => r.id === urlParamsState.standaloneId);
 
+    if (res && res.fileType === 'html' && res.pastedCode === undefined) {
+      dbService.getResourceById(res.id).then(fullResource => {
+        if (fullResource) {
+          setResources(prev => prev.map(r => r.id === fullResource.id ? { ...fullResource, pastedCode: fullResource.pastedCode || "" } : r));
+        }
+      }).catch(e => console.warn("Error fetching full standalone resource:", e));
+      
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-white">
+          <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+        </div>
+      );
+    }
+
     if (!res) {
       return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center space-y-6">
