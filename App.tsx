@@ -222,6 +222,9 @@ const App: React.FC = () => {
       desarrolloArea: resource.desarrolloArea || '',
       thumbnailUrl: resource.thumbnail && !resource.thumbnail.includes('picsum.photos') ? resource.thumbnail : ''
     });
+    if (resource.mainCategory === 'Dev') {
+      setActiveCategory('Dev');
+    }
     navigateTo(AppView.Upload);
   };
 
@@ -275,7 +278,7 @@ const App: React.FC = () => {
         courses: formData.courses,
         resourceType: formData.resourceType,
         fileType: formData.uploadMethod === 'code' ? 'html' : 'pdf',
-        mainCategory: activeCategory,
+        mainCategory: formData.mainCategory,
         rating: editingResourceId ? resources.find(r => r.id === editingResourceId)?.rating || 0 : 0,
         uploadDate: new Date().toLocaleDateString(),
         thumbnail: formData.thumbnailUrl.trim() !== '' ? formData.thumbnailUrl.trim() : `https://picsum.photos/seed/${Date.now()}/600/400`,
@@ -288,7 +291,13 @@ const App: React.FC = () => {
       await dbService.saveResource(newRes);
       setResources(prev => editingResourceId ? prev.map(r => r.id === editingResourceId ? newRes : r) : [newRes, ...prev]);
       if (typeof window !== 'undefined') window.alert("Contenido guardado.");
-      navigateTo(formData.kind === 'blog' ? AppView.Blog : AppView.Explore);
+      navigateTo(
+        formData.kind === 'blog' 
+          ? AppView.Blog 
+          : formData.mainCategory === 'Dev' 
+            ? AppView.Dev 
+            : AppView.Explore
+      );
     } catch (err) { console.error(err); } finally { setIsUploading(false); }
   };
 
