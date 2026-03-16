@@ -28,6 +28,7 @@ const UploadView = lazy(() => import('./views/UploadView').then(module => ({ def
 const AccountView = lazy(() => import('./views/AccountView').then(module => ({ default: module.AccountView })));
 const ProfileView = lazy(() => import('./views/ProfileView').then(module => ({ default: module.ProfileView })));
 const TopDocentesView = lazy(() => import('./views/TopDocentesView').then(module => ({ default: module.TopDocentesView })));
+const DevView = lazy(() => import('./views/DevView').then(module => ({ default: module.DevView })));
 import { stripHtml, renderContentWithVideos } from './utils/helpers';
 import { useTeacherRankings } from './hooks/useTeacherRankings';
 import { useSeoManager } from './hooks/useSeoManager';
@@ -409,12 +410,6 @@ const App: React.FC = () => {
           className="w-full h-full border-none" 
           title={res.title} 
         />
-        <button 
-          onClick={() => {if(typeof window !== 'undefined') window.close()}} 
-          className="absolute top-6 right-6 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl hover:scale-105 transition-all text-slate-900 border border-slate-200 hover:bg-white"
-        >
-          <X size={24} />
-        </button>
       </div>
     );
   }
@@ -431,7 +426,7 @@ const App: React.FC = () => {
         setIsMenuOpen={setIsMenuOpen} 
       />
 
-      {view !== AppView.Blog && view !== AppView.Account && view !== AppView.TopDocentes && (
+      {view !== AppView.Blog && view !== AppView.Account && view !== AppView.TopDocentes && view !== AppView.Dev && (
         <div className="bg-white border-b border-slate-200 sticky top-16 z-[40]">
           <div className="max-w-7xl mx-auto flex overflow-x-auto no-scrollbar">
             <button onClick={() => { setActiveCategory('General'); navigateTo(AppView.Explore); }} className={`flex-1 min-w-[180px] py-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase border-b-2 transition-all ${activeCategory === 'General' ? 'text-emerald-600 border-emerald-600 bg-emerald-50' : 'text-slate-400 border-transparent hover:text-slate-600'}`}><BookOpen size={16} /> General</button>
@@ -499,6 +494,19 @@ const App: React.FC = () => {
               setViewingUserEmail={setViewingUserEmail}
               navigateTo={navigateTo}
               isLoading={isLoading}
+            />
+          )}
+
+          {view === AppView.Dev && (
+            <DevView
+              resources={resources}
+              currentUser={currentUser}
+              themeClasses={themeClasses}
+              setSelectedResource={setSelectedResource}
+              navigateTo={navigateTo}
+              stripHtml={stripHtml}
+              isLoading={isLoading}
+              setResources={setResources}
             />
           )}
 

@@ -1,6 +1,6 @@
 
 export type EducationalLevel = 'Infantil' | 'Primaria' | 'Secundaria' | 'Bachillerato';
-export type MainCategory = 'General' | 'PT-AL';
+export type MainCategory = 'General' | 'PT-AL' | 'Dev';
 
 export interface User {
   email: string;
@@ -57,5 +57,6 @@ export enum AppView {
   Profile = 'profile',
   TopDocentes = 'top-docentes',
   Messages = 'messages',
-  Blog = 'blog' 
+  Blog = 'blog',
+  Dev = 'dev'
 }
