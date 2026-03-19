@@ -127,7 +127,7 @@ const App: React.FC = () => {
     }
   }, []);
 
-  useResourceDetail(resources, view, setSelectedResource);
+  const { isDetailLoading } = useResourceDetail(resources, view, selectedResource, setSelectedResource, isLoading);
   useAppData(setResources, setUsers, setCurrentUser, setProfileForm, setIsLoading, setSelectedResource);
 
   const handleGoogleLogin = async () => {
@@ -145,6 +145,11 @@ const App: React.FC = () => {
       setView(AppView.Account);
       return;
     }
+
+    if ((newView === AppView.Upload || newView === AppView.Dev) && params.fromNavbar) {
+      resetForm(newView === AppView.Dev ? 'Dev' : undefined);
+    }
+
     setView(newView);
     setIsMenuOpen(false);
     
@@ -163,7 +168,7 @@ const App: React.FC = () => {
       }
     }
 
-    if (![AppView.Upload, AppView.Profile, AppView.Detail].includes(newView)) {
+    if (![AppView.Upload, AppView.Profile, AppView.Detail, AppView.Dev].includes(newView)) {
       resetForm();
     }
   };
@@ -222,10 +227,14 @@ const App: React.FC = () => {
       desarrolloArea: resource.desarrolloArea || '',
       thumbnailUrl: resource.thumbnail && !resource.thumbnail.includes('picsum.photos') ? resource.thumbnail : ''
     });
+    
+    setActiveCategory(resource.mainCategory as MainCategory);
+
     if (resource.mainCategory === 'Dev') {
-      setActiveCategory('Dev');
+      navigateTo(AppView.Dev);
+    } else {
+      navigateTo(AppView.Upload);
     }
-    navigateTo(AppView.Upload);
   };
 
   const handleDeleteResource = async (id: string) => {
@@ -274,9 +283,9 @@ const App: React.FC = () => {
         email: currentUser.email,
         summary: formData.summary,
         level: formData.level,
-        subject: formData.subject, 
-        courses: formData.courses,
-        resourceType: formData.resourceType,
+        subject: formData.mainCategory === 'Dev' ? 'Dev' : formData.subject, 
+        courses: formData.mainCategory === 'Dev' ? [] : formData.courses,
+        resourceType: formData.mainCategory === 'Dev' ? 'Proyecto Dev' : formData.resourceType,
         fileType: formData.uploadMethod === 'code' ? 'html' : 'pdf',
         mainCategory: formData.mainCategory,
         rating: editingResourceId ? resources.find(r => r.id === editingResourceId)?.rating || 0 : 0,
@@ -285,8 +294,8 @@ const App: React.FC = () => {
         contentUrl: cleanUrl || '',
         pastedCode: formData.uploadMethod === 'code' ? formData.pastedCode : undefined,
         kind: formData.kind,
-        neae: activeCategory === 'PT-AL' && formData.kind === 'material' ? formData.neae : undefined,
-        desarrolloArea: activeCategory === 'PT-AL' && formData.kind === 'material' ? formData.desarrolloArea : undefined
+        neae: formData.mainCategory === 'PT-AL' && formData.kind === 'material' ? formData.neae : undefined,
+        desarrolloArea: formData.mainCategory === 'PT-AL' && formData.kind === 'material' ? formData.desarrolloArea : undefined
       };
       await dbService.saveResource(newRes);
       setResources(prev => editingResourceId ? prev.map(r => r.id === editingResourceId ? newRes : r) : [newRes, ...prev]);
@@ -342,13 +351,13 @@ const App: React.FC = () => {
     }
   };
 
-  const resetForm = () => {
+  const resetForm = (category?: MainCategory) => {
     setEditingResourceId(null);
     setFormData({
       title: '', summary: '', level: 'Infantil', 
       subject: (SUBJECTS_BY_LEVEL as SafeAny)['Infantil'][0], 
       courses: [], resourceType: 'Material Didáctico', 
-      mainCategory: activeCategory, uploadMethod: 'file', externalUrl: '', pastedCode: '', kind: 'material',
+      mainCategory: category || activeCategory, uploadMethod: 'file', externalUrl: '', pastedCode: '', kind: 'material',
       neae: '', desarrolloArea: '', thumbnailUrl: ''
     });
   };
@@ -506,7 +515,7 @@ const App: React.FC = () => {
             />
           )}
 
-          {view === AppView.Dev && (
+          {(view === AppView.Dev || (view === AppView.Upload && activeCategory === 'Dev')) && (
             <DevView
               resources={resources}
               currentUser={currentUser}
@@ -516,6 +525,12 @@ const App: React.FC = () => {
               stripHtml={stripHtml}
               isLoading={isLoading}
               setResources={setResources}
+              editingResourceId={editingResourceId}
+              formData={formData}
+              setFormData={setFormData}
+              handleUpload={handleUpload}
+              isUploading={isUploading}
+              initialShowForm={view === AppView.Upload}
             />
           )}
 
@@ -556,7 +571,7 @@ const App: React.FC = () => {
             />
           )}
 
-          {view === AppView.Upload && (currentUser || isLoading) && (
+          {view === AppView.Upload && activeCategory !== 'Dev' && (currentUser || isLoading) && (
             <UploadView
               editingResourceId={editingResourceId}
               themeClasses={themeClasses}
@@ -589,7 +604,7 @@ const App: React.FC = () => {
               setViewingUserEmail={setViewingUserEmail}
               handleMaximize={handleMaximize}
               renderContentWithVideos={renderContentWithVideos}
-              isLoading={isLoading}
+              isLoading={isLoading || isDetailLoading}
             />
           )}
         </Suspense>

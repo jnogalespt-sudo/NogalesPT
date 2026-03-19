@@ -95,8 +95,8 @@ const ResourceDetail: React.FC<ResourceDetailProps> = ({
   return (
     <div className="animate-in fade-in duration-300 space-y-8">
       <div className="flex items-center justify-between gap-4">
-        <button onClick={() => navigateTo(selectedResource.kind === 'blog' ? AppView.Blog : AppView.Explore)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900 transition-colors">
-          <ArrowLeft size={18}/> Volver al {selectedResource.kind === 'blog' ? 'Blog' : 'Repositorio'}
+        <button onClick={() => navigateTo(selectedResource.kind === 'blog' ? AppView.Blog : selectedResource.mainCategory === 'Dev' ? AppView.Dev : AppView.Explore)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900 transition-colors">
+          <ArrowLeft size={18}/> Volver al {selectedResource.kind === 'blog' ? 'Blog' : selectedResource.mainCategory === 'Dev' ? 'Dev' : 'Repositorio'}
         </button>
         <div className="flex items-center gap-3">
           {currentUser?.email === selectedResource.email && (

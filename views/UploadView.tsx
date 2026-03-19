@@ -79,7 +79,7 @@ export const UploadView: React.FC<UploadViewProps> = ({
                   </div>
 
                   {/* SELECTORES PT-AL (PASO 3) */}
-                  {activeCategory === 'PT-AL' && (
+                  {formData.mainCategory === 'PT-AL' && (
                     <div className="space-y-6 animate-in fade-in">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Necesidad Específica (NEAE)</label>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Code2, Plus, X, Loader2, CheckCircle2 } from 'lucide-react';
 import { Resource, AppView, User as UserType } from '../types';
 import { ExploreGrid } from '../components/ExploreGrid';
@@ -14,6 +14,12 @@ interface DevViewProps {
   stripHtml: (html: string) => string;
   isLoading?: boolean;
   setResources: React.Dispatch<React.SetStateAction<Resource[]>>;
+  editingResourceId: string | null;
+  formData: any;
+  setFormData: React.Dispatch<React.SetStateAction<any>>;
+  handleUpload: (e: React.FormEvent) => Promise<void>;
+  isUploading: boolean;
+  initialShowForm?: boolean;
 }
 
 export const DevView: React.FC<DevViewProps> = ({
@@ -24,60 +30,26 @@ export const DevView: React.FC<DevViewProps> = ({
   navigateTo,
   stripHtml,
   isLoading,
-  setResources
+  setResources,
+  editingResourceId,
+  formData,
+  setFormData,
+  handleUpload,
+  isUploading,
+  initialShowForm
 }) => {
-  const [isUploading, setIsUploading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    thumbnailUrl: '',
-    summary: '',
-    uploadMethod: 'code' as 'code' | 'file',
-    externalUrl: '',
-    pastedCode: ''
-  });
+  const [showForm, setShowForm] = useState(!!editingResourceId || !!initialShowForm);
+
+  // Update showForm when editingResourceId changes
+  useEffect(() => {
+    if (editingResourceId || initialShowForm) {
+      setShowForm(true);
+    }
+  }, [editingResourceId, initialShowForm]);
 
   const devResources = useMemo(() => {
     return resources.filter(res => res.mainCategory === 'Dev');
   }, [resources]);
-
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentUser) return;
-    setIsUploading(true);
-    try {
-      const newRes: Resource = {
-        id: Date.now().toString(),
-        title: formData.title,
-        authorName: currentUser.name,
-        email: currentUser.email,
-        summary: formData.summary,
-        level: 'Infantil', // Default values for required fields
-        subject: 'Dev',
-        courses: [],
-        resourceType: 'Proyecto Dev',
-        fileType: formData.uploadMethod === 'code' ? 'html' : 'pdf',
-        mainCategory: 'Dev',
-        rating: 0,
-        uploadDate: new Date().toLocaleDateString(),
-        thumbnail: formData.thumbnailUrl.trim() !== '' ? formData.thumbnailUrl.trim() : `https://picsum.photos/seed/${Date.now()}/600/400`,
-        contentUrl: formData.uploadMethod === 'file' ? formData.externalUrl : '',
-        pastedCode: formData.uploadMethod === 'code' ? formData.pastedCode : undefined,
-        kind: 'material'
-      };
-      await dbService.saveResource(newRes);
-      setResources(prev => [newRes, ...prev]);
-      if (typeof window !== 'undefined') window.alert("Proyecto Dev guardado.");
-      setShowForm(false);
-      setFormData({
-        title: '', thumbnailUrl: '', summary: '', uploadMethod: 'code', externalUrl: '', pastedCode: ''
-      });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 w-full animate-in fade-in duration-500">
@@ -94,7 +66,15 @@ export const DevView: React.FC<DevViewProps> = ({
         
         {currentUser && (
           <button 
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              if (showForm) {
+                setShowForm(false);
+                navigateTo(AppView.Dev, { fromNavbar: 'true' });
+              } else {
+                setFormData({ ...formData, mainCategory: 'Dev' });
+                setShowForm(true);
+              }
+            }}
             className="bg-slate-900 text-white px-6 py-3 rounded-xl text-xs font-black uppercase flex items-center gap-2 shadow-lg hover:bg-slate-800 transition-all"
           >
             {showForm ? <><X size={16} /> Cancelar</> : <><Plus size={16} /> Subir Proyecto</>}
