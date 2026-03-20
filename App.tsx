@@ -68,6 +68,11 @@ const getInitialBlogCategory = (): string => {
 import { useResourceDetail } from './hooks/useResourceDetail';
 import { useAppData } from './hooks/useAppData';
 
+const normalize = (str: string) => 
+  str.normalize("NFD")
+     .replace(/[\u0300-\u036f]/g, "")
+     .toLowerCase();
+
 const App: React.FC = () => {
   const { cookieConsent, showCookieBanner, handleAcceptCookies, handleRejectCookies } = useCookieManager();
   
@@ -253,7 +258,10 @@ const App: React.FC = () => {
     return resources.filter(res => {
       if (res.kind === 'blog') return false; 
       const matchesCategory = res.mainCategory === activeCategory;
-      const matchesSearch = res.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const q = normalize(searchQuery);
+      const matchesSearch = normalize(res.title).includes(q) ||
+                            normalize(res.summary).includes(q) ||
+                            normalize(res.authorName).includes(q);
       const matchesLevel = filterLevel === 'Todos' || res.level === filterLevel;
       const matchesNeae = filterNeae === 'Todos' || res.neae === filterNeae;
       const matchesDesarrollo = filterDesarrollo === 'Todos' || res.desarrolloArea === filterDesarrollo;
@@ -265,7 +273,10 @@ const App: React.FC = () => {
     return resources.filter(res => {
       if (res.kind !== 'blog') return false;
       const matchesCategory = activeBlogCategory === 'Todo' || res.subject === activeBlogCategory;
-      const matchesSearch = res.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const q = normalize(searchQuery);
+      const matchesSearch = normalize(res.title).includes(q) ||
+                            normalize(res.summary).includes(q) ||
+                            normalize(res.authorName).includes(q);
       return matchesCategory && matchesSearch;
     });
   }, [resources, activeBlogCategory, searchQuery]);
@@ -300,6 +311,9 @@ const App: React.FC = () => {
       await dbService.saveResource(newRes);
       setResources(prev => editingResourceId ? prev.map(r => r.id === editingResourceId ? newRes : r) : [newRes, ...prev]);
       if (typeof window !== 'undefined') window.alert("Contenido guardado.");
+      if (formData.mainCategory === 'Dev') {
+        setEditingResourceId(null);
+      }
       navigateTo(
         formData.kind === 'blog' 
           ? AppView.Blog 

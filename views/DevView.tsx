@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Code2, Plus, X, Loader2, CheckCircle2 } from 'lucide-react';
 import { Resource, AppView, User as UserType } from '../types';
 import { ExploreGrid } from '../components/ExploreGrid';
@@ -48,8 +48,14 @@ export const DevView: React.FC<DevViewProps> = ({
     }
   }, [editingResourceId, initialShowForm]);
 
+  const wasUploading = useRef(false);
+
   useEffect(() => {
-    if (!isUploading && showForm) {
+    if (isUploading) {
+      wasUploading.current = true;
+    }
+    if (!isUploading && wasUploading.current) {
+      wasUploading.current = false;
       setShowForm(false);
     }
   }, [isUploading]);
