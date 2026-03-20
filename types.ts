@@ -14,6 +14,7 @@ export interface User {
   linkedin?: string;
   twitter?: string;
   website?: string;
+  role?: 'superadmin' | 'admin' | 'user';
 }
 
 export interface Resource {

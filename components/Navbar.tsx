@@ -27,7 +27,9 @@ const Navbar: React.FC<NavbarProps> = ({ navigateTo, themeClasses, currentUser, 
             <button onClick={() => navigateTo(AppView.Blog)} className="text-xs font-black uppercase text-slate-500 hover:text-indigo-600 transition-colors">Blog</button>
             <button onClick={() => navigateTo(AppView.TopDocentes)} className="text-xs font-black uppercase text-slate-500 hover:text-indigo-600 transition-colors">Ranking</button>
             <button onClick={() => navigateTo(AppView.Dev, { fromNavbar: 'true' })} className="text-xs font-black uppercase text-slate-500 hover:text-indigo-600 transition-colors">Dev</button>
-            <button onClick={() => navigateTo(AppView.Upload, { fromNavbar: 'true' })} className={`${themeClasses.bg} text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all`}><Upload size={16} /> Subir</button>
+            {currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+              <button onClick={() => navigateTo(AppView.Upload, { fromNavbar: 'true' })} className={`${themeClasses.bg} text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all`}><Upload size={16} /> Subir</button>
+            )}
             <button onClick={() => navigateTo(AppView.Account)} className="flex items-center gap-2 p-1.5 pr-4 rounded-full border bg-slate-100 hover:bg-slate-200 transition-colors">{currentUser?.avatar ? <img src={currentUser.avatar} className="w-8 h-8 rounded-full object-cover" alt="Avatar" /> : <UserIcon size={18} />}<span className="text-[10px] font-black uppercase">{currentUser ? currentUser.name : 'Mi Cuenta'}</span></button>
           </div>
           <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}><Menu size={24} /></button>
@@ -44,7 +46,9 @@ const Navbar: React.FC<NavbarProps> = ({ navigateTo, themeClasses, currentUser, 
               <button onClick={() => navigateTo(AppView.Blog)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><Newspaper size={20} /> Blog</button>
               <button onClick={() => navigateTo(AppView.TopDocentes)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><Trophy size={20} /> Ranking</button>
               <button onClick={() => navigateTo(AppView.Dev, { fromNavbar: 'true' })} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><LayoutGrid size={20} /> Dev</button>
-              <button onClick={() => navigateTo(AppView.Upload, { fromNavbar: 'true' })} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><Upload size={20} /> Subir Material</button>
+              {currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+                <button onClick={() => navigateTo(AppView.Upload, { fromNavbar: 'true' })} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><Upload size={20} /> Subir Material</button>
+              )}
               <button onClick={() => navigateTo(AppView.Account)} className="flex items-center gap-4 w-full text-left font-black uppercase text-slate-600 hover:text-indigo-600"><UserCircle size={20} /> Mi Cuenta</button>
             </div>
           </div>

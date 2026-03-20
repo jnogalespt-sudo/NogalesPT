@@ -39,6 +39,7 @@ export const DevView: React.FC<DevViewProps> = ({
   initialShowForm
 }) => {
   const [showForm, setShowForm] = useState(!!editingResourceId || !!initialShowForm);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Update showForm when editingResourceId changes
   useEffect(() => {
@@ -47,9 +48,26 @@ export const DevView: React.FC<DevViewProps> = ({
     }
   }, [editingResourceId, initialShowForm]);
 
+  useEffect(() => {
+    if (!isUploading && showForm) {
+      setShowForm(false);
+    }
+  }, [isUploading]);
+
   const devResources = useMemo(() => {
     return resources.filter(res => res.mainCategory === 'Dev');
   }, [resources]);
+
+  const filteredDevResources = useMemo(() => {
+    return devResources.filter(res => {
+      const q = searchQuery.toLowerCase();
+      return (
+        res.title.toLowerCase().includes(q) ||
+        res.summary.toLowerCase().includes(q) ||
+        res.authorName.toLowerCase().includes(q)
+      );
+    });
+  }, [devResources, searchQuery]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 w-full animate-in fade-in duration-500">
@@ -118,7 +136,15 @@ export const DevView: React.FC<DevViewProps> = ({
         </div>
       )}
 
-      {devResources.length === 0 && !isLoading ? (
+      <input 
+        type="text"
+        placeholder="Buscar proyectos..."
+        value={searchQuery}
+        onChange={e => setSearchQuery(e.target.value)}
+        className="w-full p-4 rounded-2xl bg-white border border-slate-200 font-bold outline-none focus:ring-2 focus:ring-slate-200 transition-all mb-8"
+      />
+
+      {filteredDevResources.length === 0 && !isLoading ? (
         <div className="text-center py-20 bg-white rounded-[32px] border border-slate-100">
           <Code2 size={48} className="mx-auto text-slate-200 mb-4" />
           <h3 className="text-xl font-black text-slate-400 uppercase">Sin proyectos</h3>
@@ -126,7 +152,7 @@ export const DevView: React.FC<DevViewProps> = ({
         </div>
       ) : (
         <ExploreGrid
-          filteredResources={devResources}
+          filteredResources={filteredDevResources}
           themeClasses={{ text: 'text-slate-500', bg: 'bg-slate-900' }}
           setSelectedResource={setSelectedResource}
           navigateTo={navigateTo}

@@ -315,6 +315,7 @@ const App: React.FC = () => {
     setAuthError(null);
     const user = users.find(u => u.email === loginEmail && u.password === loginPassword);
     if (user) {
+      if (user.email === 'nogales1994@gmail.com') user.role = 'superadmin';
       setCurrentUser(user);
       setProfileForm(user);
       if (typeof window !== 'undefined') {
@@ -328,7 +329,8 @@ const App: React.FC = () => {
     if (users.some(u => u.email === loginEmail)) { setAuthError("Ya registrado."); return; }
     const newUser: UserType = {
       email: loginEmail, name: registerName, password: loginPassword,
-      avatar: `https://ui-avatars.com/api/?name=${registerName}&background=random`
+      avatar: `https://ui-avatars.com/api/?name=${registerName}&background=random`,
+      role: loginEmail === 'nogales1994@gmail.com' ? 'superadmin' : 'user'
     };
     await dbService.saveUser(newUser);
     setUsers(prev => [...prev, newUser]);

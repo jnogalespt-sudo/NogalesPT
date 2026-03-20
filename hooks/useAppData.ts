@@ -76,11 +76,16 @@ export function useAppData(
               const uEmail = activeSession.user.email || '';
               let user = usersData.find((u: UserType) => u.email === uEmail);
               
-              if (!user) {
+              if (user) {
+                if (user.email === 'nogales1994@gmail.com') {
+                  user.role = 'superadmin';
+                }
+              } else {
                 user = {
                   email: uEmail,
                   name: activeSession.user.user_metadata?.full_name || uEmail.split('@')[0],
-                  avatar: activeSession.user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${uEmail}&background=random`
+                  avatar: activeSession.user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${uEmail}&background=random`,
+                  role: uEmail === 'nogales1994@gmail.com' ? 'superadmin' : 'user'
                 };
                 await dbService.saveUser(user);
                 if (isMounted && currentCallId === authCallId) {

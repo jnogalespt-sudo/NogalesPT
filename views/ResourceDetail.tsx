@@ -99,7 +99,7 @@ const ResourceDetail: React.FC<ResourceDetailProps> = ({
           <ArrowLeft size={18}/> Volver al {selectedResource.kind === 'blog' ? 'Blog' : selectedResource.mainCategory === 'Dev' ? 'Dev' : 'Repositorio'}
         </button>
         <div className="flex items-center gap-3">
-          {currentUser?.email === selectedResource.email && (
+          {(currentUser?.email === selectedResource.email || currentUser?.role === 'superadmin') && (
             <>
               <button onClick={() => handleEditResource(selectedResource)} className="px-6 py-3 bg-white text-indigo-600 border border-indigo-200 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2 hover:bg-indigo-50 transition-colors"><Edit3 size={14} /> Editar</button>
               <button onClick={() => handleDeleteResource(selectedResource.id)} className="px-6 py-3 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-black text-[10px] uppercase shadow-sm flex items-center gap-2 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} /> Eliminar</button>

@@ -1,5 +1,5 @@
-import React from 'react';
-import { LogOut, UserCircle, Save, Share2, Instagram, Globe, Linkedin } from 'lucide-react';
+import React, { useState } from 'react';
+import { LogOut, UserCircle, Save, Share2, Instagram, Globe, Linkedin, ShieldAlert } from 'lucide-react';
 import { User as UserType, AppView } from '../types';
 import { dbService } from '../services/dbService';
 
@@ -50,6 +50,28 @@ export const AccountView: React.FC<AccountViewProps> = ({
   setProfileForm,
   isLoading
 }) => {
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminRole, setAdminRole] = useState<'user' | 'admin'>('user');
+  const [adminMessage, setAdminMessage] = useState('');
+
+  const handleUpdateRole = async () => {
+    if (!adminEmail) return;
+    try {
+      const users = await dbService.getUsers();
+      const targetUser = users.find(u => u.email === adminEmail);
+      if (targetUser) {
+        targetUser.role = adminRole;
+        await dbService.saveUser(targetUser);
+        setAdminMessage(`Rol de ${adminEmail} actualizado a ${adminRole}`);
+      } else {
+        setAdminMessage('Usuario no encontrado');
+      }
+    } catch (error) {
+      setAdminMessage('Error al actualizar rol');
+    }
+    setTimeout(() => setAdminMessage(''), 3000);
+  };
+
   if (isLoading) {
     return (
       <div className="flex py-24 items-center justify-center">
@@ -124,6 +146,36 @@ export const AccountView: React.FC<AccountViewProps> = ({
               </div>
             </div>
           </div>
+          
+          {currentUser.role === 'superadmin' && (
+            <div className="mt-8 bg-slate-900 p-12 rounded-[48px] border border-slate-800 shadow-xl space-y-8 animate-in slide-in-from-bottom-4">
+              <h3 className="text-xs font-black uppercase text-slate-400 mb-4 tracking-widest flex items-center gap-2"><ShieldAlert size={18} className="text-amber-400"/> Panel de Superadmin</h3>
+              <div className="flex flex-col md:flex-row gap-4 items-center">
+                <input 
+                  type="email" 
+                  value={adminEmail} 
+                  onChange={e => setAdminEmail(e.target.value)} 
+                  className="flex-1 w-full p-5 rounded-2xl bg-slate-800 border-none font-bold text-white outline-none focus:ring-2 focus:ring-amber-400/50" 
+                  placeholder="Email del usuario..." 
+                />
+                <select 
+                  value={adminRole} 
+                  onChange={e => setAdminRole(e.target.value as 'user' | 'admin')} 
+                  className="w-full md:w-auto p-5 rounded-2xl bg-slate-800 border-none font-bold text-white outline-none focus:ring-2 focus:ring-amber-400/50 cursor-pointer"
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button 
+                  onClick={handleUpdateRole} 
+                  className="w-full md:w-auto py-5 px-8 bg-amber-500 text-slate-900 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-amber-400 transition-all"
+                >
+                  Aplicar
+                </button>
+              </div>
+              {adminMessage && <p className="text-amber-400 font-bold text-sm text-center">{adminMessage}</p>}
+            </div>
+          )}
         </div>
       )}
     </div>
