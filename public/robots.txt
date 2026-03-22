@@ -2,8 +2,6 @@ User-agent: *
 Allow: /?view=detail
 Allow: /?view=explore
 Allow: /?view=blog
+Allow: /?view=profile
 Disallow: /?view=upload
 Disallow: /?view=account
-Disallow: /?view=profile
-
-Sitemap: https://nogalespt.com/sitemap.xml
