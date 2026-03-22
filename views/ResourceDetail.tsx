@@ -176,7 +176,7 @@ const ResourceDetail: React.FC<ResourceDetailProps> = ({
           </div>
           <div className="space-y-8">
             <div className="bg-white p-10 rounded-[48px] shadow-sm border border-slate-100 text-center space-y-8 sticky top-24">
-              <div className="cursor-pointer group" onClick={() => { setViewingUserEmail(selectedResource.email); navigateTo(AppView.Profile, { user: selectedResource.email }); }}>
+              <div className="cursor-pointer group" onClick={() => { setViewingUserEmail(selectedResource.email.split('@')[0]); navigateTo(AppView.Profile, { user: selectedResource.email.split('@')[0] }); }}>
                 <img loading="lazy" src={users.find(u => u.email === selectedResource.email)?.avatar || `https://ui-avatars.com/api/?name=${selectedResource.authorName}`} className="w-28 h-28 rounded-[36px] mx-auto shadow-xl object-cover border-4 border-slate-50 group-hover:scale-105 transition-transform" alt={selectedResource.authorName} />
                 <h3 className="font-black text-slate-900 text-xl mt-6 group-hover:text-indigo-600 transition-colors">{selectedResource.authorName}</h3>
               </div>

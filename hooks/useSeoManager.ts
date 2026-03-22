@@ -24,7 +24,7 @@ export const useSeoManager = (
     } else if (view === AppView.Blog) {
       title = activeBlogCategory === 'Todo' ? "Blog Educativo | NOGALESPT" : `Estrategias sobre ${activeBlogCategory} | NOGALESPT`;
     } else if (view === AppView.Profile && viewingUserEmail) {
-      const user = users.find(u => u.email === viewingUserEmail);
+      const user = users.find(u => u.email.split('@')[0] === viewingUserEmail);
       if (user) {
         title = `${user.name} ${user.lastName || ''} | NogalesPT`.trim();
         description = user.bio || `Perfil docente de ${user.name} en NogalesPT. Recursos educativos para PT y AL.`;
