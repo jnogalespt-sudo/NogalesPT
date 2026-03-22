@@ -187,7 +187,7 @@ const App: React.FC = () => {
   const activeProfile = useMemo(() => users.find(u => u.email === viewingUserEmail) || null, [users, viewingUserEmail]);
   const profileResources = useMemo(() => resources.filter(r => r.email === viewingUserEmail), [resources, viewingUserEmail]);
 
-  useSeoManager(view, selectedResource, activeBlogCategory, activeCategory, stripHtml);
+  useSeoManager(view, selectedResource, activeBlogCategory, activeCategory, stripHtml, users, viewingUserEmail);
 
   const cleanGoogleDriveUrl = (url: string) => {
     if (url.includes('drive.google.com')) {

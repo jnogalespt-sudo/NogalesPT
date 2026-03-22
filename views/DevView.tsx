@@ -38,15 +38,16 @@ export const DevView: React.FC<DevViewProps> = ({
   isUploading,
   initialShowForm
 }) => {
-  const [showForm, setShowForm] = useState(!!editingResourceId || !!initialShowForm);
+  const [showForm, setShowForm] = useState(
+    !!editingResourceId
+  );
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Update showForm when editingResourceId changes
   useEffect(() => {
-    if (editingResourceId || initialShowForm) {
+    if (editingResourceId) {
       setShowForm(true);
     }
-  }, [editingResourceId, initialShowForm]);
+  }, [editingResourceId]);
 
   const wasUploading = useRef(false);
 

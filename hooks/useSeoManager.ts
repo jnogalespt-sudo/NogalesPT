@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
-import { AppView, Resource, MainCategory } from '../types';
+import { AppView, Resource, MainCategory, User as UserType } from '../types';
 
 export const useSeoManager = (
   view: AppView,
   selectedResource: Resource | null,
   activeBlogCategory: string,
   activeCategory: MainCategory,
-  stripHtml: (html: string) => string
+  stripHtml: (html: string) => string,
+  users: UserType[],
+  viewingUserEmail: string | null
 ) => {
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -21,6 +23,13 @@ export const useSeoManager = (
       if (selectedResource.thumbnail) image = selectedResource.thumbnail;
     } else if (view === AppView.Blog) {
       title = activeBlogCategory === 'Todo' ? "Blog Educativo | NOGALESPT" : `Estrategias sobre ${activeBlogCategory} | NOGALESPT`;
+    } else if (view === AppView.Profile && viewingUserEmail) {
+      const user = users.find(u => u.email === viewingUserEmail);
+      if (user) {
+        title = `${user.name} ${user.lastName || ''} | NogalesPT`.trim();
+        description = user.bio || `Perfil docente de ${user.name} en NogalesPT. Recursos educativos para PT y AL.`;
+        if (user.avatar) image = user.avatar;
+      }
     }
 
     document.title = title;
@@ -47,5 +56,12 @@ export const useSeoManager = (
     if (typeof window !== 'undefined') {
       updateMeta('og:url', window.location.href, 'property');
     }
-  }, [view, selectedResource, activeBlogCategory, activeCategory, stripHtml]);
+
+    if (view === AppView.Detail && 
+        selectedResource?.mainCategory === 'Dev') {
+      updateMeta('robots', 'noindex, nofollow');
+    } else {
+      updateMeta('robots', 'index, follow');
+    }
+  }, [view, selectedResource, activeBlogCategory, activeCategory, stripHtml, users, viewingUserEmail]);
 };
