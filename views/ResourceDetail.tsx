@@ -165,6 +165,7 @@ const ResourceDetail: React.FC<ResourceDetailProps> = ({
                       srcDoc={selectedResource.pastedCode} 
                       className="w-full h-full border-none bg-white" 
                       title={selectedResource.title} 
+                      allow="microphone; camera"
                     />
                     <button onClick={handleMaximize} className="absolute bottom-8 right-8 p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl hover:scale-110 transition-all text-slate-900 active:scale-95">
                       <Maximize2 size={24} />
