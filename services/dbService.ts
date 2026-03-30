@@ -44,11 +44,11 @@ export const dbService = {
   async getResourceById(id: string): Promise<Resource | null> {
     const { data, error } = await supabase
       .from('resources')
-      .select('data')
+      .select('data, pastedcode')
       .eq('id', id)
       .single();
     if (error || !data) return null;
-    return data.data as Resource;
+    return { ...data.data, pastedCode: data.pastedcode } as Resource;
   },
 
   async getResources(): Promise<Resource[]> {
@@ -60,9 +60,7 @@ export const dbService = {
 
       if (data && !error) {
         return data.map(r => {
-          const resource = r.data as Resource;
-          const { pastedCode, ...resourceWithoutCode } = resource;
-          return resourceWithoutCode as Resource;
+          return r.data as Resource;
         });
       }
     } catch (e) {
@@ -79,9 +77,14 @@ export const dbService = {
 
   async saveResource(resource: Resource): Promise<void> {
     try {
+      const { pastedCode, ...resourceSinCodigo } = resource;
       await supabase
         .from('resources')
-        .upsert({ id: resource.id, data: resource });
+        .upsert({ 
+          id: resource.id, 
+          data: resourceSinCodigo,
+          pastedcode: pastedCode || null
+        });
     } catch (e) {
       console.error('Supabase save error:', e);
     }

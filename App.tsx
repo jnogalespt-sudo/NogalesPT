@@ -69,7 +69,7 @@ import { useResourceDetail } from './hooks/useResourceDetail';
 import { useAppData } from './hooks/useAppData';
 
 const normalize = (str: string) => 
-  str.normalize("NFD")
+  (str || '').normalize("NFD")
      .replace(/[\u0300-\u036f]/g, "")
      .toLowerCase();
 
@@ -184,8 +184,8 @@ const App: React.FC = () => {
       : { bg: 'bg-indigo-600', text: 'text-indigo-600', softBg: 'bg-indigo-50', softText: 'text-indigo-700' };
   }, [activeCategory]);
 
-  const activeProfile = useMemo(() => users.find(u => u.email.split('@')[0] === viewingUserEmail) || null, [users, viewingUserEmail]);
-  const profileResources = useMemo(() => resources.filter(r => r.email.split('@')[0] === viewingUserEmail), [resources, viewingUserEmail]);
+  const activeProfile = useMemo(() => users.find(u => (u.email?.split('@')?.[0] || '') === viewingUserEmail) || null, [users, viewingUserEmail]);
+  const profileResources = useMemo(() => resources.filter(r => (r.email?.split('@')?.[0] || '') === viewingUserEmail), [resources, viewingUserEmail]);
 
   useSeoManager(view, selectedResource, activeBlogCategory, activeCategory, stripHtml, users, viewingUserEmail);
 

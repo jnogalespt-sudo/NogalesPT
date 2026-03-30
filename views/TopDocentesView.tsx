@@ -37,7 +37,7 @@ export const TopDocentesView: React.FC<TopDocentesViewProps> = ({
             <div className="flex items-center gap-3 mb-8"><div className={`${themeClasses.bg} p-2 rounded-xl text-white shadow-md`}><Trophy size={18} /></div><h3 className="text-sm font-black uppercase text-slate-900 tracking-widest">{level}</h3></div>
             <div className="space-y-6">
               {teachers.map(teacher => (
-                <div key={teacher.user.email} className="flex items-center gap-4 cursor-pointer group" onClick={() => { setViewingUserEmail(teacher.user.email.split('@')[0]); navigateTo(AppView.Profile, { user: teacher.user.email.split('@')[0] }); }}>
+                <div key={teacher.user.email} className="flex items-center gap-4 cursor-pointer group" onClick={() => { setViewingUserEmail(teacher.user.email?.split('@')?.[0] || ''); navigateTo(AppView.Profile, { user: teacher.user.email?.split('@')?.[0] || '' }); }}>
                   <img src={teacher.user.avatar} className="w-12 h-12 rounded-full border-2 border-white shadow-md object-cover" />
                   <div className="flex-1 min-w-0"><h4 className="font-bold text-slate-800 text-sm truncate">{teacher.user.name}</h4><p className="text-[10px] font-bold text-slate-400 uppercase">{teacher.count} recursos</p></div>
                   <div className="text-amber-500 font-black text-xs flex items-center gap-1"><Star size={14} fill="currentColor"/> {teacher.avgRating.toFixed(1)}</div>

@@ -83,7 +83,7 @@ export function useAppData(
               } else {
                 user = {
                   email: uEmail,
-                  name: activeSession.user.user_metadata?.full_name || uEmail.split('@')[0],
+                  name: activeSession.user.user_metadata?.full_name || uEmail?.split('@')?.[0] || '',
                   avatar: activeSession.user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${uEmail}&background=random`,
                   role: uEmail === 'nogales1994@gmail.com' ? 'superadmin' : 'user'
                 };
