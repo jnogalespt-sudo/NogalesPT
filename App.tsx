@@ -612,6 +612,8 @@ const App: React.FC = () => {
               handleUpload={handleUpload}
               isUploading={isUploading}
               initialShowForm={false}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
             />
           )}
 
