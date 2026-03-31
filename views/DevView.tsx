@@ -20,11 +20,6 @@ interface DevViewProps {
   handleUpload: (e: React.FormEvent) => Promise<void>;
   isUploading: boolean;
   initialShowForm?: boolean;
-  hasMoreResourcesDev?: boolean;
-  isLoadingMoreDev?: boolean;
-  handleLoadMoreDev?: () => void;
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
 }
 
 export const DevView: React.FC<DevViewProps> = ({
@@ -41,16 +36,12 @@ export const DevView: React.FC<DevViewProps> = ({
   setFormData,
   handleUpload,
   isUploading,
-  initialShowForm,
-  hasMoreResourcesDev,
-  isLoadingMoreDev,
-  handleLoadMoreDev,
-  searchQuery,
-  setSearchQuery
+  initialShowForm
 }) => {
   const [showForm, setShowForm] = useState(
     !!editingResourceId
   );
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (editingResourceId) {
@@ -174,9 +165,6 @@ export const DevView: React.FC<DevViewProps> = ({
           navigateTo={navigateTo}
           stripHtml={stripHtml}
           isLoading={isLoading}
-          hasMoreResources={hasMoreResourcesDev}
-          isLoadingMore={isLoadingMoreDev}
-          handleLoadMore={handleLoadMoreDev}
         />
       )}
     </div>
