@@ -77,6 +77,7 @@ const App: React.FC = () => {
   const { cookieConsent, showCookieBanner, handleAcceptCookies, handleRejectCookies } = useCookieManager();
   
   const [resources, setResources] = useState<Resource[]>([]);
+  const [allResources, setAllResources] = useState<Resource[]>([]);
   const [users, setUsers] = useState<UserType[]>([]);
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,6 +123,11 @@ const App: React.FC = () => {
   });
   const [standaloneResource, setStandaloneResource] = useState<Resource | null>(null);
 
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [hasMoreResources, setHasMoreResources] = useState<boolean>(true);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  const allResourcesFetchedRef = useRef(false);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -134,6 +140,62 @@ const App: React.FC = () => {
 
   const { isDetailLoading } = useResourceDetail(resources, view, selectedResource, setSelectedResource, isLoading);
   useAppData(setResources, setUsers, setCurrentUser, setProfileForm, setIsLoading, setSelectedResource);
+
+  useEffect(() => {
+    if (view === AppView.Explore) {
+      const fetchInitial = async () => {
+        setIsLoading(true);
+        const data = await dbService.getResourcesPaginated(
+          0,
+          activeCategory,
+          filterLevel,
+          filterNeae,
+          filterDesarrollo
+        );
+        setResources(data);
+        setCurrentPage(0);
+        setHasMoreResources(data.length === 20);
+        allResourcesFetchedRef.current = false;
+        setIsLoading(false);
+      };
+      
+      const timeoutId = setTimeout(() => {
+        fetchInitial();
+      }, 300);
+      return () => clearTimeout(timeoutId);
+    } else if (view === AppView.Blog || view === AppView.TopDocentes || view === AppView.Profile || view === AppView.Dev) {
+      // Si navegamos a una vista que necesita todos los recursos y no están cargados
+      const fetchAll = async () => {
+        if (allResourcesFetchedRef.current) return;
+        setIsLoading(true);
+        const data = await dbService.getResources().catch(() => []);
+        setAllResources(data);
+        allResourcesFetchedRef.current = true;
+        setIsLoading(false);
+      };
+      fetchAll();
+    }
+  }, [view, activeCategory, searchQuery, filterLevel, filterNeae, filterDesarrollo]);
+
+  const handleLoadMore = async () => {
+    if (isLoadingMore || !hasMoreResources) return;
+    setIsLoadingMore(true);
+    const nextPage = currentPage + 1;
+    const data = await dbService.getResourcesPaginated(
+      nextPage,
+      activeCategory,
+      filterLevel,
+      filterNeae,
+      filterDesarrollo
+    );
+    setResources(prev => {
+      const newResources = data.filter(r => !prev.some(p => p.id === r.id));
+      return [...prev, ...newResources];
+    });
+    setCurrentPage(nextPage);
+    setHasMoreResources(data.length === 20);
+    setIsLoadingMore(false);
+  };
 
   const handleGoogleLogin = async () => {
     setAuthError(null);
@@ -185,7 +247,7 @@ const App: React.FC = () => {
   }, [activeCategory]);
 
   const activeProfile = useMemo(() => users.find(u => (u.email?.split('@')?.[0] || '') === viewingUserEmail) || null, [users, viewingUserEmail]);
-  const profileResources = useMemo(() => resources.filter(r => (r.email?.split('@')?.[0] || '') === viewingUserEmail), [resources, viewingUserEmail]);
+  const profileResources = useMemo(() => allResources.filter(r => (r.email?.split('@')?.[0] || '') === viewingUserEmail), [allResources, viewingUserEmail]);
 
   useSeoManager(view, selectedResource, activeBlogCategory, activeCategory, stripHtml, users, viewingUserEmail);
 
@@ -517,6 +579,9 @@ const App: React.FC = () => {
                 navigateTo={navigateTo}
                 stripHtml={stripHtml}
                 isLoading={isLoading}
+                hasMoreResources={hasMoreResources}
+                isLoadingMore={isLoadingMore}
+                handleLoadMore={handleLoadMore}
               />
             </div>
           )}
@@ -533,7 +598,7 @@ const App: React.FC = () => {
 
           {(view === AppView.Dev || (view === AppView.Upload && activeCategory === 'Dev')) && (
             <DevView
-              resources={resources}
+              resources={allResources}
               currentUser={currentUser}
               themeClasses={themeClasses}
               setSelectedResource={setSelectedResource}

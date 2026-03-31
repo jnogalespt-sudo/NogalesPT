@@ -120,6 +120,17 @@ export function useAppData(
 
         const fetchResources = async () => {
           try {
+            if (typeof window !== 'undefined') {
+              const params = new URLSearchParams(window.location.search);
+              const view = params.get('view');
+              if (view === 'detail' || view === 'explore') {
+                if (isMounted && currentCallId === authCallId) {
+                  setIsLoading(false);
+                }
+                return;
+              }
+            }
+
             // 2. Fetch fresh data
             const resData = await dbService.getResources().catch(() => []);
             
