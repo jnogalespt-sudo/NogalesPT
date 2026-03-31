@@ -126,12 +126,6 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [hasMoreResources, setHasMoreResources] = useState<boolean>(true);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
-  
-  const [devResources, setDevResources] = useState<Resource[]>([]);
-  const [currentPageDev, setCurrentPageDev] = useState<number>(0);
-  const [hasMoreResourcesDev, setHasMoreResourcesDev] = useState<boolean>(true);
-  const [isLoadingMoreDev, setIsLoadingMoreDev] = useState<boolean>(false);
-  
   const allResourcesFetchedRef = useRef(false);
 
   useEffect(() => {
@@ -154,7 +148,6 @@ const App: React.FC = () => {
         const data = await dbService.getResourcesPaginated(
           0,
           activeCategory,
-          searchQuery,
           filterLevel,
           filterNeae,
           filterDesarrollo
@@ -170,21 +163,7 @@ const App: React.FC = () => {
         fetchInitial();
       }, 300);
       return () => clearTimeout(timeoutId);
-    } else if (view === AppView.Dev || (view === AppView.Upload && activeCategory === 'Dev')) {
-      const fetchInitialDev = async () => {
-        setIsLoading(true);
-        const data = await dbService.getResourcesPaginated(0, 'Dev', searchQuery);
-        setDevResources(data);
-        setCurrentPageDev(0);
-        setHasMoreResourcesDev(data.length === 20);
-        setIsLoading(false);
-      };
-      
-      const timeoutId = setTimeout(() => {
-        fetchInitialDev();
-      }, 300);
-      return () => clearTimeout(timeoutId);
-    } else if (view === AppView.Blog || view === AppView.TopDocentes || view === AppView.Profile) {
+    } else if (view === AppView.Blog || view === AppView.TopDocentes || view === AppView.Profile || view === AppView.Dev) {
       // Si navegamos a una vista que necesita todos los recursos y no están cargados
       const fetchAll = async () => {
         if (allResourcesFetchedRef.current) return;
@@ -205,7 +184,6 @@ const App: React.FC = () => {
     const data = await dbService.getResourcesPaginated(
       nextPage,
       activeCategory,
-      searchQuery,
       filterLevel,
       filterNeae,
       filterDesarrollo
@@ -217,20 +195,6 @@ const App: React.FC = () => {
     setCurrentPage(nextPage);
     setHasMoreResources(data.length === 20);
     setIsLoadingMore(false);
-  };
-
-  const handleLoadMoreDev = async () => {
-    if (isLoadingMoreDev || !hasMoreResourcesDev) return;
-    setIsLoadingMoreDev(true);
-    const nextPage = currentPageDev + 1;
-    const data = await dbService.getResourcesPaginated(nextPage, 'Dev', searchQuery);
-    setDevResources(prev => {
-      const newResources = data.filter(r => !prev.some(p => p.id === r.id));
-      return [...prev, ...newResources];
-    });
-    setCurrentPageDev(nextPage);
-    setHasMoreResourcesDev(data.length === 20);
-    setIsLoadingMoreDev(false);
   };
 
   const handleGoogleLogin = async () => {
@@ -634,25 +598,20 @@ const App: React.FC = () => {
 
           {(view === AppView.Dev || (view === AppView.Upload && activeCategory === 'Dev')) && (
             <DevView
-              resources={devResources}
+              resources={allResources}
               currentUser={currentUser}
               themeClasses={themeClasses}
               setSelectedResource={setSelectedResource}
               navigateTo={navigateTo}
               stripHtml={stripHtml}
               isLoading={isLoading}
-              setResources={setDevResources}
+              setResources={setResources}
               editingResourceId={editingResourceId}
               formData={formData}
               setFormData={setFormData}
               handleUpload={handleUpload}
               isUploading={isUploading}
               initialShowForm={false}
-              hasMoreResourcesDev={hasMoreResourcesDev}
-              isLoadingMoreDev={isLoadingMoreDev}
-              handleLoadMoreDev={handleLoadMoreDev}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
             />
           )}
 
