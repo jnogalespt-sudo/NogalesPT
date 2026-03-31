@@ -314,7 +314,7 @@ const App: React.FC = () => {
     } catch (err) { console.error(err); }
   };
 
-  const teacherRankings = useTeacherRankings(resources, users);
+  const teacherRankings = useTeacherRankings(allResources, users);
 
   const filteredResources = useMemo(() => {
     return resources.filter(res => {
@@ -332,7 +332,7 @@ const App: React.FC = () => {
   }, [resources, activeCategory, searchQuery, filterLevel, filterNeae, filterDesarrollo]);
 
   const filteredBlogPosts = useMemo(() => {
-    return resources.filter(res => {
+    return allResources.filter(res => {
       if (res.kind !== 'blog') return false;
       const matchesCategory = activeBlogCategory === 'Todo' || res.subject === activeBlogCategory;
       const q = normalize(searchQuery);
@@ -612,8 +612,6 @@ const App: React.FC = () => {
               handleUpload={handleUpload}
               isUploading={isUploading}
               initialShowForm={false}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
             />
           )}
 

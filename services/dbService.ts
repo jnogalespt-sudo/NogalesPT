@@ -84,35 +84,11 @@ export const dbService = {
     filterDesarrollo?: string
   ): Promise<Resource[]> {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('resources')
         .select('id, data')
-        .eq('data->>mainCategory', category)
         .order('created_at', { ascending: false })
         .range(page * 20, (page + 1) * 20 - 1);
-
-      if (filterLevel && filterLevel !== 'Todos') {
-        query = query.eq('data->>level', filterLevel);
-      }
-      if (filterNeae && filterNeae !== 'Todos') {
-        query = query.eq('data->>neae', filterNeae);
-      }
-      if (filterDesarrollo && filterDesarrollo !== 'Todos') {
-        query = query.eq('data->>desarrolloArea', filterDesarrollo);
-      }
-      if (search) {
-        const searchNorm = search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-        query = query.or(
-          `data->>title.ilike.%${search}%,` +
-          `data->>title.ilike.%${searchNorm}%,` +
-          `data->>summary.ilike.%${search}%,` +
-          `data->>summary.ilike.%${searchNorm}%,` +
-          `data->>authorName.ilike.%${search}%,` +
-          `data->>authorName.ilike.%${searchNorm}%`
-        );
-      }
-
-      const { data, error } = await query;
 
       if (data && !error) {
         return data.map(r => r.data as Resource);
