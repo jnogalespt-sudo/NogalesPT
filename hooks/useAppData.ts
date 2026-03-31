@@ -123,7 +123,7 @@ export function useAppData(
             if (typeof window !== 'undefined') {
               const params = new URLSearchParams(window.location.search);
               const view = params.get('view');
-              if (view === 'detail' || view === 'explore' || view === 'dev') {
+              if (view === 'detail' || view === 'explore' || view === 'dev' || view === 'blog') {
                 if (isMounted && currentCallId === authCallId) {
                   setIsLoading(false);
                 }
