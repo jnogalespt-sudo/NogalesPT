@@ -78,17 +78,29 @@ export const dbService = {
   async getResourcesPaginated(
     page: number,
     category: string,
-    search?: string,
     filterLevel?: string,
     filterNeae?: string,
     filterDesarrollo?: string
   ): Promise<Resource[]> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('resources')
         .select('id, data')
+        .eq('data->>mainCategory', category)
         .order('created_at', { ascending: false })
         .range(page * 20, (page + 1) * 20 - 1);
+
+      if (filterLevel && filterLevel !== 'Todos') {
+        query = query.eq('data->>level', filterLevel);
+      }
+      if (filterNeae && filterNeae !== 'Todos') {
+        query = query.eq('data->>neae', filterNeae);
+      }
+      if (filterDesarrollo && filterDesarrollo !== 'Todos') {
+        query = query.eq('data->>desarrolloArea', filterDesarrollo);
+      }
+
+      const { data, error } = await query;
 
       if (data && !error) {
         return data.map(r => r.data as Resource);
