@@ -78,6 +78,7 @@ export const dbService = {
   async getResourcesPaginated(
     page: number,
     category: string,
+    search?: string,
     filterLevel?: string,
     filterNeae?: string,
     filterDesarrollo?: string
@@ -98,6 +99,17 @@ export const dbService = {
       }
       if (filterDesarrollo && filterDesarrollo !== 'Todos') {
         query = query.eq('data->>desarrolloArea', filterDesarrollo);
+      }
+      if (search) {
+        const searchNorm = search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        query = query.or(
+          `data->>title.ilike.%${search}%,` +
+          `data->>title.ilike.%${searchNorm}%,` +
+          `data->>summary.ilike.%${search}%,` +
+          `data->>summary.ilike.%${searchNorm}%,` +
+          `data->>authorName.ilike.%${search}%,` +
+          `data->>authorName.ilike.%${searchNorm}%`
+        );
       }
 
       const { data, error } = await query;
