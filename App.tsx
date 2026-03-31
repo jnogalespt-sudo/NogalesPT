@@ -598,7 +598,7 @@ const App: React.FC = () => {
 
           {(view === AppView.Dev || (view === AppView.Upload && activeCategory === 'Dev')) && (
             <DevView
-              resources={resources}
+              resources={allResources}
               currentUser={currentUser}
               themeClasses={themeClasses}
               setSelectedResource={setSelectedResource}
@@ -612,6 +612,8 @@ const App: React.FC = () => {
               handleUpload={handleUpload}
               isUploading={isUploading}
               initialShowForm={false}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
             />
           )}
 
