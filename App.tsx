@@ -598,7 +598,7 @@ const App: React.FC = () => {
 
           {(view === AppView.Dev || (view === AppView.Upload && activeCategory === 'Dev')) && (
             <DevView
-              resources={allResources}
+              resources={resources}
               currentUser={currentUser}
               themeClasses={themeClasses}
               setSelectedResource={setSelectedResource}
