@@ -20,8 +20,6 @@ interface DevViewProps {
   handleUpload: (e: React.FormEvent) => Promise<void>;
   isUploading: boolean;
   initialShowForm?: boolean;
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
 }
 
 export const DevView: React.FC<DevViewProps> = ({
