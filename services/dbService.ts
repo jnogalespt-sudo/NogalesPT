@@ -103,7 +103,13 @@ export const dbService = {
       const { data, error } = await query;
 
       if (data && !error) {
-        return data.map(r => r.data as Resource);
+        const all = data.map(r => r.data as Resource);
+        if (category === 'blog') {
+          return all.filter(r => r.kind === 'blog');
+        }
+        return all.filter(r => 
+          r.mainCategory === category && r.kind !== 'blog'
+        );
       }
     } catch (e) {
       console.error('Supabase fetch paginated error:', e);
