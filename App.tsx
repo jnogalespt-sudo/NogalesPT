@@ -170,7 +170,6 @@ const App: React.FC = () => {
         setIsLoading(true);
         const data = await dbService.getResources().catch(() => []);
         setAllResources(data);
-        setResources(data);
         allResourcesFetchedRef.current = true;
         setIsLoading(false);
       };
@@ -315,7 +314,7 @@ const App: React.FC = () => {
     } catch (err) { console.error(err); }
   };
 
-  const teacherRankings = useTeacherRankings(allResources, users);
+  const teacherRankings = useTeacherRankings(resources, users);
 
   const filteredResources = useMemo(() => {
     return resources.filter(res => {
@@ -333,7 +332,7 @@ const App: React.FC = () => {
   }, [resources, activeCategory, searchQuery, filterLevel, filterNeae, filterDesarrollo]);
 
   const filteredBlogPosts = useMemo(() => {
-    return allResources.filter(res => {
+    return resources.filter(res => {
       if (res.kind !== 'blog') return false;
       const matchesCategory = activeBlogCategory === 'Todo' || res.subject === activeBlogCategory;
       const q = normalize(searchQuery);
@@ -342,7 +341,7 @@ const App: React.FC = () => {
                             normalize(res.authorName).includes(q);
       return matchesCategory && matchesSearch;
     });
-  }, [allResources, activeBlogCategory, searchQuery]);
+  }, [resources, activeBlogCategory, searchQuery]);
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
