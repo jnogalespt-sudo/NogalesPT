@@ -26,7 +26,6 @@ export function useResourceDetail(
       if (viewParam === AppView.Detail && idParam) {
         const found = resources.find(r => r.id === idParam);
         if (found) {
-          // If we already have the full resource in selectedResource, don't fetch again
           if (selectedResource?.id === found.id) {
             if (found.fileType !== 'html' || selectedResource.pastedCode !== undefined) {
               setIsDetailLoading(false);
@@ -50,7 +49,16 @@ export function useResourceDetail(
             setIsDetailLoading(false);
           }
         } else {
-          setIsDetailLoading(false);
+          setIsDetailLoading(true);
+          dbService.getResourceById(idParam).then((fullResource: Resource | null) => {
+            if (fullResource) {
+              setSelectedResource({
+                ...fullResource,
+                pastedCode: fullResource.pastedCode || ""
+              });
+            }
+          }).catch((e: any) => console.warn("Error fetching full resource:", e))
+            .finally(() => setIsDetailLoading(false));
         }
       } else {
         setIsDetailLoading(false);
