@@ -79,7 +79,9 @@ const App: React.FC = () => {
   const [allResources, setAllResources] = useState<Resource[]>([]);
   const [users, setUsers] = useState<UserType[]>([]);
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(
+    typeof window === 'undefined' || new URLSearchParams(window.location.search).get('standalone') !== 'true'
+  );
   const [isUploading, setIsUploading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -116,9 +118,15 @@ const App: React.FC = () => {
     instagram: '', linkedin: '', tiktok: '', twitter: '', website: ''
   });
 
-  const [urlParamsState, setUrlParamsState] = useState<{isStandalone: boolean, standaloneId: string | null}>({
-    isStandalone: false,
-    standaloneId: null
+  const [urlParamsState, setUrlParamsState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        isStandalone: params.get('standalone') === 'true',
+        standaloneId: params.get('id')
+      };
+    }
+    return { isStandalone: false, standaloneId: null };
   });
   const [standaloneResource, setStandaloneResource] = useState<Resource | null>(null);
 
@@ -126,16 +134,6 @@ const App: React.FC = () => {
   const [hasMoreResources, setHasMoreResources] = useState<boolean>(true);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const allResourcesFetchedRef = useRef(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      setUrlParamsState({
-        isStandalone: params.get('standalone') === 'true',
-        standaloneId: params.get('id')
-      });
-    }
-  }, []);
 
   const { isDetailLoading } = useResourceDetail(resources, view, selectedResource, setSelectedResource, isLoading);
   const isStandaloneMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('standalone') === 'true';
@@ -714,3 +712,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+
