@@ -8,13 +8,18 @@ export function useAppData(
   setCurrentUser: React.Dispatch<React.SetStateAction<UserType | null>>,
   setProfileForm: React.Dispatch<React.SetStateAction<UserType>>,
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>,
-  setSelectedResource: React.Dispatch<React.SetStateAction<Resource | null>>
+  setSelectedResource: React.Dispatch<React.SetStateAction<Resource | null>>,
+  isStandalone: boolean = false
 ) {
   useEffect(() => {
+    if (isStandalone) {
+      setIsLoading(false);
+      return;
+    }
+
     let isMounted = true;
     let authCallId = 0;
 
-    // Carga prioritaria de recurso específico si viene por URL
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const view = params.get('view');
@@ -24,7 +29,7 @@ export function useAppData(
         dbService.getResourceById(idParam).then((resource: Resource | null) => {
           if (isMounted && resource) {
             setSelectedResource(resource);
-            setIsLoading(false); // 1. Libera setIsLoading(false) inmediatamente
+            setIsLoading(false);
           }
         }).catch((e: any) => {
           console.warn("Error cargando recurso prioritario:", e);
@@ -35,7 +40,6 @@ export function useAppData(
     const loadDataAndAuth = async (session: any) => {
       const currentCallId = ++authCallId;
       try {
-        // 1. SWR: Load from cache first
         if (typeof window !== 'undefined') {
           const cachedResources = localStorage.getItem('nogalespt_cached_resources');
           if (cachedResources) {
@@ -44,11 +48,7 @@ export function useAppData(
               if (Array.isArray(parsed) && parsed.length > 0) {
                 if (isMounted) {
                   setResources(parsed);
-                  
-                  // Si venimos de un redirect OAuth, NO quitamos el loading
-                  // para dar tiempo a que Supabase lea la sesión
                   const isOAuthRedirect = window.location.hash.includes('access_token');
-                  
                   if (!isOAuthRedirect) {
                     setIsLoading(false);
                   }
@@ -66,7 +66,6 @@ export function useAppData(
             if (!isMounted || currentCallId !== authCallId) return;
             setUsers(usersData || []);
 
-            // Obtener la sesión más reciente para evitar condiciones de carrera
             const { data: { session: currentSession } } = await supabase.auth.getSession();
             const activeSession = currentSession || session;
 
@@ -131,22 +130,15 @@ export function useAppData(
               }
             }
 
-            // 2. Fetch fresh data
             const resData = await dbService.getResources().catch(() => []);
-            
             if (!isMounted || currentCallId !== authCallId) return;
-            
-            // 3. Update state with fresh data
             const finalResources = resData || [];
             setResources(finalResources);
 
-            // 4. Update cache
             if (typeof window !== 'undefined') {
               try {
                 localStorage.setItem('nogalespt_cached_resources', JSON.stringify(finalResources));
-              } catch (e) {
-                // Ignorar error de cuota excedida para no romper el flujo
-              }
+              } catch (e) {}
             }
           } catch (error) {
             console.error("Error en fetchResources:", error);
@@ -168,14 +160,12 @@ export function useAppData(
       }
     };
 
-    // Recuperar el Atrapador: forzar la lectura del token de Google al montar la app
     supabase.auth.getSession().then(({ data: { session } }: any) => {
       if (isMounted) {
         loadDataAndAuth(session);
       }
     });
 
-    // Mantener el Listener para futuros eventos
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (isMounted) {
@@ -195,5 +185,5 @@ export function useAppData(
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [isStandalone]);
 }
