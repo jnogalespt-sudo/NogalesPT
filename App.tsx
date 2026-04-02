@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect, Suspense, lazy } from 'react';
 import { 
   Search, Upload, Star, Download, Info, User as UserIcon, Menu, X, FileUp, 
@@ -139,7 +138,8 @@ const App: React.FC = () => {
   }, []);
 
   const { isDetailLoading } = useResourceDetail(resources, view, selectedResource, setSelectedResource, isLoading);
-  useAppData(setResources, setUsers, setCurrentUser, setProfileForm, setIsLoading, setSelectedResource);
+  const isStandaloneMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('standalone') === 'true';
+  useAppData(setResources, setUsers, setCurrentUser, setProfileForm, setIsLoading, setSelectedResource, isStandaloneMode);
 
   useEffect(() => {
     if (view === AppView.Explore) {
@@ -164,7 +164,6 @@ const App: React.FC = () => {
       }, 300);
       return () => clearTimeout(timeoutId);
     } else if (view === AppView.Blog || view === AppView.TopDocentes || view === AppView.Profile || view === AppView.Dev) {
-      // Si navegamos a una vista que necesita todos los recursos y no están cargados
       const fetchAll = async () => {
         if (allResourcesFetchedRef.current) return;
         setIsLoading(true);
@@ -257,8 +256,6 @@ const App: React.FC = () => {
     }
     return url;
   };
-
-
 
   const copyToClipboard = (text: string) => {
     if (typeof window !== 'undefined' && navigator?.clipboard) {
