@@ -8,15 +8,9 @@ export function useAppData(
   setCurrentUser: React.Dispatch<React.SetStateAction<UserType | null>>,
   setProfileForm: React.Dispatch<React.SetStateAction<UserType>>,
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>,
-  setSelectedResource: React.Dispatch<React.SetStateAction<Resource | null>>,
-  isStandalone: boolean = false
+  setSelectedResource: React.Dispatch<React.SetStateAction<Resource | null>>
 ) {
   useEffect(() => {
-    if (isStandalone) {
-      setIsLoading(false);
-      return;
-    }
-
     let isMounted = true;
     let authCallId = 0;
 
@@ -185,5 +179,5 @@ export function useAppData(
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [isStandalone]);
+  }, []);
 }
