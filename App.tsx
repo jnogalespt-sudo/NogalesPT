@@ -79,9 +79,7 @@ const App: React.FC = () => {
   const [allResources, setAllResources] = useState<Resource[]>([]);
   const [users, setUsers] = useState<UserType[]>([]);
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
-  const [isLoading, setIsLoading] = useState(
-    typeof window === 'undefined' || new URLSearchParams(window.location.search).get('standalone') !== 'true'
-  );
+  const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -118,15 +116,9 @@ const App: React.FC = () => {
     instagram: '', linkedin: '', tiktok: '', twitter: '', website: ''
   });
 
-  const [urlParamsState, setUrlParamsState] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      return {
-        isStandalone: params.get('standalone') === 'true',
-        standaloneId: params.get('id')
-      };
-    }
-    return { isStandalone: false, standaloneId: null };
+  const [urlParamsState, setUrlParamsState] = useState<{isStandalone: boolean, standaloneId: string | null}>({
+    isStandalone: false,
+    standaloneId: null
   });
   const [standaloneResource, setStandaloneResource] = useState<Resource | null>(null);
 
@@ -135,9 +127,18 @@ const App: React.FC = () => {
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const allResourcesFetchedRef = useRef(false);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      setUrlParamsState({
+        isStandalone: params.get('standalone') === 'true',
+        standaloneId: params.get('id')
+      });
+    }
+  }, []);
+
   const { isDetailLoading } = useResourceDetail(resources, view, selectedResource, setSelectedResource, isLoading);
-  const isStandaloneMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('standalone') === 'true';
-  useAppData(setResources, setUsers, setCurrentUser, setProfileForm, setIsLoading, setSelectedResource, isStandaloneMode);
+  useAppData(setResources, setUsers, setCurrentUser, setProfileForm, setIsLoading, setSelectedResource);
 
   useEffect(() => {
     if (view === AppView.Explore) {
@@ -690,7 +691,7 @@ const App: React.FC = () => {
 
       {showCookieBanner && (
         <div className="fixed bottom-0 left-0 right-0 z-[9999] p-4 md:p-8 animate-in slide-in-from-bottom-full duration-500">
-          <div className="max-w-7xl mx-auto bg-slate-900 text-white rounded-[32px] p-6 md:p-10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] border border-slate-800 flex flex-col md:flex-row items-center gap-8 backdrop-blur-md bg-slate-900/95">
+          <div className="max-w-7xl mx-auto bg-slate-900 text-white rounded-[32px] p-6 md:p-10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] border border-slate-800 flex flex-col md:flex-row items=center gap-8 backdrop-blur-md bg-slate-900/95">
             <div className="bg-indigo-600/20 p-4 rounded-3xl text-indigo-400">
               <ShieldCheck size={40} />
             </div>
